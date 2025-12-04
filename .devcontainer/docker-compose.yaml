@@ -1,0 +1,18 @@
+services:
+  unitn-ap-common-dev:
+    image: ghcr.io/unitn-ap-2025/common-dev
+    container_name: unitn-ap-common-dev
+    working_dir: /workspace
+    volumes:
+      - "..:/workspace"
+      - type: volume
+        source: ssh-agent
+        target: /ssh-agent
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent/ssh.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: sleep infinity
+
+volumes:
+  ssh-agent:

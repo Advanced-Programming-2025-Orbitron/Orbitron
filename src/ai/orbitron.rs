@@ -44,20 +44,7 @@ impl PlanetAI for MyPlanetAI {
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        if state.has_rocket() {
-            return state.take_rocket();
-        }
-
-        if !state.can_have_rocket() {
-            return None;
-        }
-
-        for i in 0..state.cells_count() {
-            if state.cell(i).is_charged() && state.build_rocket(i).is_ok() {
-                return state.take_rocket();
-            }
-        }
-
+    
         None
     }
 

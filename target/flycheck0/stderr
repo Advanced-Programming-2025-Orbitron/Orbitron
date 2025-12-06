@@ -1,90 +1,12 @@
-   0.259809159s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint: fingerprint error for common-game v0.1.0 (/workspace)/Check { test: false }/TargetInner { name: "common-game", doc: true, ..: with_path("/workspace/src/main.rs", Edition2024) }
-   0.259922659s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/target/debug/.fingerprint/common-game-817e38b7d6b14868/bin-common-game`
-
-Caused by:
-    No such file or directory (os error 2)
-
-Stack backtrace:
-   0: cargo_util::paths::read_bytes
-   1: cargo_util::paths::read
-   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
-   3: cargo::core::compiler::fingerprint::prepare_target
-   4: cargo::core::compiler::compile
-   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
-   6: cargo::ops::cargo_compile::compile_ws
-   7: cargo::ops::cargo_compile::compile_with_exec
-   8: cargo::ops::cargo_compile::compile
-   9: cargo::commands::check::exec
-  10: <cargo::cli::Exec>::exec
-  11: cargo::main
-  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
-  13: std::rt::lang_start::<()>::{closure#0}
-  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/core/src/ops/function.rs:287:21
-  15: std::panicking::catch_unwind::do_call
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
-  16: std::panicking::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
-  17: std::panic::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
-  18: std::rt::lang_start_internal::{{closure}}
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:175:24
-  19: std::panicking::catch_unwind::do_call
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
-  20: std::panicking::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
-  21: std::panic::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
-  22: std::rt::lang_start_internal
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:171:5
-  23: main
-  24: <unknown>
-  25: __libc_start_main
-  26: <unknown>
-   0.420398946s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint: fingerprint error for common-game v0.1.0 (/workspace)/Check { test: true }/TargetInner { name: "common-game", doc: true, ..: with_path("/workspace/src/main.rs", Edition2024) }
-   0.420439171s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/target/debug/.fingerprint/common-game-85b23e04c466909d/test-bin-common-game`
-
-Caused by:
-    No such file or directory (os error 2)
-
-Stack backtrace:
-   0: cargo_util::paths::read_bytes
-   1: cargo_util::paths::read
-   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
-   3: cargo::core::compiler::fingerprint::prepare_target
-   4: cargo::core::compiler::compile
-   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
-   6: cargo::ops::cargo_compile::compile_ws
-   7: cargo::ops::cargo_compile::compile_with_exec
-   8: cargo::ops::cargo_compile::compile
-   9: cargo::commands::check::exec
-  10: <cargo::cli::Exec>::exec
-  11: cargo::main
-  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
-  13: std::rt::lang_start::<()>::{closure#0}
-  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/core/src/ops/function.rs:287:21
-  15: std::panicking::catch_unwind::do_call
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
-  16: std::panicking::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
-  17: std::panic::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
-  18: std::rt::lang_start_internal::{{closure}}
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:175:24
-  19: std::panicking::catch_unwind::do_call
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
-  20: std::panicking::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
-  21: std::panic::catch_unwind
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
-  22: std::rt::lang_start_internal
-             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:171:5
-  23: main
-  24: <unknown>
-  25: __libc_start_main
-  26: <unknown>
+   0.368892369s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint: stale: changed "/workspace/src/main.rs"
+   0.369069613s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:           (vs) "/workspace/target/debug/.fingerprint/common-game-817e38b7d6b14868/dep-bin-common-game"
+   0.369074408s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1765051039, nanos: 695954800 } < FileTime { seconds: 1765051083, nanos: 831568100 }
+   0.376515363s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint: fingerprint dirty for common-game v0.1.0 (/workspace)/Check { test: false }/TargetInner { name: "common-game", doc: true, ..: with_path("/workspace/src/main.rs", Edition2024) }
+   0.376630384s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/workspace/target/debug/.fingerprint/common-game-817e38b7d6b14868/dep-bin-common-game", reference_mtime: FileTime { seconds: 1765051039, nanos: 695954800 }, stale: "/workspace/src/main.rs", stale_mtime: FileTime { seconds: 1765051083, nanos: 831568100 } }))
+   0.532021805s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint: stale: changed "/workspace/src/main.rs"
+   0.532060606s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:           (vs) "/workspace/target/debug/.fingerprint/common-game-85b23e04c466909d/dep-test-bin-common-game"
+   0.532064297s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1765051039, nanos: 723180800 } < FileTime { seconds: 1765051083, nanos: 831568100 }
+   0.539540517s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint: fingerprint dirty for common-game v0.1.0 (/workspace)/Check { test: true }/TargetInner { name: "common-game", doc: true, ..: with_path("/workspace/src/main.rs", Edition2024) }
+   0.539579124s  INFO prepare_target{force=false package_id=common-game v0.1.0 (/workspace) target="common-game"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/workspace/target/debug/.fingerprint/common-game-85b23e04c466909d/dep-test-bin-common-game", reference_mtime: FileTime { seconds: 1765051039, nanos: 723180800 }, stale: "/workspace/src/main.rs", stale_mtime: FileTime { seconds: 1765051083, nanos: 831568100 } }))
     Checking common-game v0.1.0 (/workspace)
-error: could not compile `common-game` (bin "common-game") due to 1 previous error; 12 warnings emitted
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `common-game` (bin "common-game" test) due to 1 previous error; 12 warnings emitted
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.08s

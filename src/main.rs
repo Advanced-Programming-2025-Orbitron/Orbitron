@@ -29,7 +29,6 @@ pub fn create_planet(
     rx_orchestrator: mpsc::Receiver<common_game::protocols::messages::OrchestratorToPlanet>,
     tx_orchestrator: mpsc::Sender<common_game::protocols::messages::PlanetToOrchestrator>,
     rx_explorer: mpsc::Receiver<common_game::protocols::messages::ExplorerToPlanet>,
-    tx_explorer: mpsc::Sender<common_game::protocols::messages::PlanetToExplorer>,
 ) -> Planet {
     let planet_type = PlanetType::B;
     let gen_rules = vec![

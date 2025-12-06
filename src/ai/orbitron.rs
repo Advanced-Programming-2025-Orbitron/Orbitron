@@ -44,7 +44,6 @@ impl PlanetAI for MyPlanetAI {
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-    
         None
     }
 

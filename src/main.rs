@@ -32,7 +32,12 @@ pub fn create_planet(
     tx_explorer: mpsc::Sender<common_game::protocols::messages::PlanetToExplorer>,
 ) -> Planet {
     let planet_type = PlanetType::B;
-    let gen_rules = vec![BasicResourceType::Hydrogen, BasicResourceType::Oxygen, BasicResourceType::Carbon, BasicResourceType::Silicon];
+    let gen_rules = vec![
+        BasicResourceType::Hydrogen,
+        BasicResourceType::Oxygen,
+        BasicResourceType::Carbon,
+        BasicResourceType::Silicon,
+    ];
     let comb_rules = vec![ComplexResourceType::Water];
 
     let ai = Box::new(MyPlanetAI::new());

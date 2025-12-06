@@ -21,8 +21,39 @@ impl PlanetAI for MyPlanetAI {
         msg: OrchestratorToPlanet,
     ) -> Option<PlanetToOrchestrator> {
         match msg {
-            OrchestratorToPlanet::Sunray(sunray) => None,
-            OrchestratorToPlanet::InternalStateRequest => None,
+            OrchestratorToPlanet::Sunray(sunray) => {
+                state.charge_cell(sunray)?;
+                Some(PlanetToOrchestrator::SunrayAck {
+                    planet_id: state.id(),
+                })
+            }
+
+            OrchestratorToPlanet::Asteroid(asteroid) => None,
+
+            OrchestratorToPlanet::StartPlanetAI => None,
+
+            OrchestratorToPlanet::StopPlanetAI => None,
+
+            OrchestratorToPlanet::InternalStateRequest => {
+                Some(PlanetToOrchestrator::InternalStateResponse {
+                    planet_id: state.id(),
+                    planet_state: state.to_dummy(),
+                })
+            }
+
+            OrchestratorToPlanet::IncomingExplorerRequest {
+                explorer_id,
+                new_mpsc_sender,
+            } => {
+                // channel todo
+
+                Some(PlanetToOrchestrator::IncomingExplorerResponse {
+                    planet_id: state.id(),
+                    res: Ok(()),
+                })
+            }
+
+            OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id } => None,
 
             _ => None,
         }

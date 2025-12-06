@@ -49,7 +49,7 @@ pub fn create_planet(
         gen_rules,
         comb_rules,
         (rx_orchestrator, tx_orchestrator),
-        (rx_explorer, tx_explorer),
+        rx_explorer,
     )
     .expect("Invalid planet configuration – check constraints!")
 }

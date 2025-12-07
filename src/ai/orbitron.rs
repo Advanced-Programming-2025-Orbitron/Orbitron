@@ -22,17 +22,36 @@ impl PlanetAI for MyPlanetAI {
     ) -> Option<PlanetToOrchestrator> {
         match msg {
             OrchestratorToPlanet::Sunray(sunray) => {
-                state.charge_cell(sunray)?;
-                Some(PlanetToOrchestrator::SunrayAck {
+                let response: Option<common_game::components::sunray::Sunray> =
+                    state.charge_cell(sunray);
+                match response {
+                    None => Some(PlanetToOrchestrator::SunrayAck {
+                        planet_id: state.id(),
+                    }),
+                    Some(sunray) => None,
+                }
+            }
+
+            OrchestratorToPlanet::Asteroid(asteroid) => Some(PlanetToOrchestrator::AsteroidAck {
+                planet_id: state.id(),
+                rocket: None,
+            }),
+
+            OrchestratorToPlanet::StartPlanetAI => {
+                self.start(state);
+                Some(PlanetToOrchestrator::StartPlanetAIResult {
                     planet_id: state.id(),
                 })
             }
 
-            OrchestratorToPlanet::Asteroid(asteroid) => None,
+            OrchestratorToPlanet::StopPlanetAI => {
+                self.stop(state);
+                Some(PlanetToOrchestrator::StopPlanetAIResult {
+                    planet_id: state.id(),
+                })
+            }
 
-            OrchestratorToPlanet::StartPlanetAI => None,
-
-            OrchestratorToPlanet::StopPlanetAI => None,
+            OrchestratorToPlanet::KillPlanet => None,
 
             OrchestratorToPlanet::InternalStateRequest => {
                 Some(PlanetToOrchestrator::InternalStateResponse {
@@ -53,7 +72,14 @@ impl PlanetAI for MyPlanetAI {
                 })
             }
 
-            OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id } => None,
+            OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id } => {
+                // channel do to
+                // is always Ok(())
+                Some(PlanetToOrchestrator::OutgoingExplorerResponse {
+                    planet_id: state.id(),
+                    res: Ok(()),
+                })
+            }
 
             _ => None,
         }

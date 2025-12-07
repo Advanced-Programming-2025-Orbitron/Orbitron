@@ -7,12 +7,12 @@ use common_game::components::resource::{
 use common_game::components::rocket::Rocket;
 use common_game::components::sunray::Sunray;
 use common_game::protocols::messages::*;
-pub struct MyPlanetAI {
+pub struct OrbitronAI {
     is_started: bool,
     is_stopped: bool,
 }
 
-impl MyPlanetAI {
+impl OrbitronAI {
     pub fn new() -> Self {
         Self {
             is_started: false,
@@ -21,7 +21,7 @@ impl MyPlanetAI {
     }
 }
 
-impl PlanetAI for MyPlanetAI {
+impl PlanetAI for OrbitronAI {
     fn handle_orchestrator_msg(
         &mut self,
         state: &mut PlanetState,

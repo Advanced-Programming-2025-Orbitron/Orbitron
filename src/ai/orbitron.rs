@@ -2,13 +2,19 @@ use common_game::components::energy_cell::EnergyCell;
 use common_game::components::planet::{PlanetAI, PlanetState, PlanetType};
 use common_game::components::resource::{BasicResourceType, Combinator, Generator};
 use common_game::components::rocket::Rocket;
+use common_game::components::sunray::Sunray;
 use common_game::protocols::messages::*;
-
-pub struct MyPlanetAI {}
+pub struct MyPlanetAI {
+    is_started: bool,
+    is_stopped: bool,
+}
 
 impl MyPlanetAI {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            is_started: false,
+            is_stopped: false,
+        }
     }
 }
 
@@ -22,8 +28,7 @@ impl PlanetAI for MyPlanetAI {
     ) -> Option<PlanetToOrchestrator> {
         match msg {
             OrchestratorToPlanet::Sunray(sunray) => {
-                let response: Option<common_game::components::sunray::Sunray> =
-                    state.charge_cell(sunray);
+                let response = state.charge_cell(sunray);
                 match response {
                     None => Some(PlanetToOrchestrator::SunrayAck {
                         planet_id: state.id(),
@@ -32,55 +37,12 @@ impl PlanetAI for MyPlanetAI {
                 }
             }
 
-            OrchestratorToPlanet::Asteroid(asteroid) => Some(PlanetToOrchestrator::AsteroidAck {
-                planet_id: state.id(),
-                rocket: None,
-            }),
-
-            OrchestratorToPlanet::StartPlanetAI => {
-                self.start(state);
-                Some(PlanetToOrchestrator::StartPlanetAIResult {
-                    planet_id: state.id(),
-                })
-            }
-
-            OrchestratorToPlanet::StopPlanetAI => {
-                self.stop(state);
-                Some(PlanetToOrchestrator::StopPlanetAIResult {
-                    planet_id: state.id(),
-                })
-            }
-
-            OrchestratorToPlanet::KillPlanet => None,
-
             OrchestratorToPlanet::InternalStateRequest => {
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id(),
                     planet_state: state.to_dummy(),
                 })
             }
-
-            OrchestratorToPlanet::IncomingExplorerRequest {
-                explorer_id,
-                new_mpsc_sender,
-            } => {
-                // channel todo
-
-                Some(PlanetToOrchestrator::IncomingExplorerResponse {
-                    planet_id: state.id(),
-                    res: Ok(()),
-                })
-            }
-
-            OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id } => {
-                // channel do to
-                // is always Ok(())
-                Some(PlanetToOrchestrator::OutgoingExplorerResponse {
-                    planet_id: state.id(),
-                    res: Ok(()),
-                })
-            }
-
             _ => None,
         }
     }
@@ -104,7 +66,11 @@ impl PlanetAI for MyPlanetAI {
         None
     }
 
-    fn start(&mut self, state: &PlanetState) {}
+    fn start(&mut self, _state: &PlanetState) {
+        self.is_started = true;
+    }
 
-    fn stop(&mut self, state: &PlanetState) {}
+    fn stop(&mut self, _state: &PlanetState) {
+        self.is_stopped = true;
+    }
 }

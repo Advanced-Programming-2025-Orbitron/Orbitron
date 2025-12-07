@@ -5,34 +5,40 @@ use common_game::components::resource::{
     BasicResourceType, Combinator, ComplexResourceType, Generator,
 };
 use common_game::components::rocket::Rocket;
-use common_game::protocols::messages;
-use crossbeam_channel::{Receiver, Sender};
+use common_game::protocols::messages::*;
+use crossbeam_channel::{Receiver, Sender, bounded};
 
 mod ai;
 use ai::orbitron::MyPlanetAI;
 
+fn get_test_channels() -> (
+    Receiver<OrchestratorToPlanet>,
+    Sender<PlanetToOrchestrator>,
+    Receiver<ExplorerToPlanet>,
+) {
+    let (tx_orch_to_planet, rx_orch_to_planet) = bounded::<OrchestratorToPlanet>(100);
+
+    let (tx_planet_to_orch, rx_planet_to_orch) = bounded::<PlanetToOrchestrator>(100);
+
+    let (tx_expl_to_planet, rx_expl_to_planet) = bounded::<ExplorerToPlanet>(100);
+
+    (rx_orch_to_planet, tx_planet_to_orch, rx_expl_to_planet)
+}
+
 fn main() {
-    // let rx_orchestrator =
-    //     mpsc::Receiver::<common_game::protocols::messages::OrchestratorToPlanet>::try_from_stdin()
-    //         .expect("Failed to get orchestrator receiver");
-    // let tx_orchestrator =
-    //     mpsc::Sender::<common_game::protocols::messages::PlanetToOrchestrator>::try_from_stdout()
-    //         .expect("Failed to get orchestrator sender");
-    // let rx_explorer =
-    //     mpsc::Receiver::<common_game::protocols::messages::ExplorerToPlanet>::try_from_fd(3)
-    //         .expect("Failed to get explorer receiver");
+    let channels = get_test_channels();
 
-    // let planet = create_planet(rx_orchestrator, tx_orchestrator, rx_explorer);
+    let mut planet = create_planet(channels.0, channels.1, channels.2);
 
-    // if let Err(e) = planet.run() {
-    //     eprintln!("Planet {} crashed: {}", planet.id(), e);
-    // }
+    if let Err(e) = planet.run() {
+        eprintln!("Planet {} crashed: {}", planet.id(), e);
+    }
 }
 
 pub fn create_planet(
-    rx_orchestrator: Receiver<messages::OrchestratorToPlanet>,
-    tx_orchestrator: Sender<messages::PlanetToOrchestrator>,
-    rx_explorer: Receiver<messages::ExplorerToPlanet>,
+    rx_orchestrator: Receiver<OrchestratorToPlanet>,
+    tx_orchestrator: Sender<PlanetToOrchestrator>,
+    rx_explorer: Receiver<ExplorerToPlanet>,
 ) -> Planet {
     let planet_type = PlanetType::B;
     let gen_rules = vec![
@@ -43,7 +49,7 @@ pub fn create_planet(
     ];
     let comb_rules = vec![ComplexResourceType::Water];
 
-    let ai = Box::new(MyPlanetAI::new());
+    let ai: Box<MyPlanetAI> = Box::new(MyPlanetAI::new());
 
     Planet::new(
         0,

@@ -1,0 +1,16 @@
+/workspace/target/debug/deps/common_game-408d7a202dbdd919.d: /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/lib.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/asteroid.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/energy_cell.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/planet.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/resource.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/forge.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/rocket.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/sunray.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/logging.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/protocols.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/protocols/messages.rs
+
+/workspace/target/debug/deps/libcommon_game-408d7a202dbdd919.rmeta: /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/lib.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/asteroid.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/energy_cell.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/planet.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/resource.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/forge.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/rocket.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/sunray.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/logging.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/protocols.rs /opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/protocols/messages.rs
+
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/lib.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/asteroid.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/energy_cell.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/planet.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/resource.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/forge.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/rocket.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/components/sunray.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/logging.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/protocols.rs:
+/opt/cargo/git/checkouts/common-0848b00a3123a0e0/5b5c697/app/game/src/protocols/messages.rs:

@@ -1,4 +1,4 @@
-services:
+ervices:
   unitn-ap-common-dev:
     image: ghcr.io/unitn-ap-2025/common-dev
     container_name: unitn-ap-common-dev

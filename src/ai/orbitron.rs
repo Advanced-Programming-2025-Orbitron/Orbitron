@@ -28,7 +28,9 @@ impl PlanetAI for MyPlanetAI {
                 })
             }
 
-            OrchestratorToPlanet::Asteroid(asteroid) => None,
+            OrchestratorToPlanet::Asteroid(asteroid) => {
+                EGHASDFHASKJDGADJKGSS
+            },
 
             OrchestratorToPlanet::StartPlanetAI => None,
 

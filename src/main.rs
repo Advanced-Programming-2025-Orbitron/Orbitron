@@ -9,7 +9,7 @@ use common_game::protocols::messages::*;
 use crossbeam_channel::{Receiver, Sender, bounded};
 
 mod ai;
-use ai::orbitron::MyPlanetAI;
+use ai::orbitron::OrbitronAI;
 
 fn get_test_channels() -> (
     Receiver<OrchestratorToPlanet>,
@@ -49,7 +49,7 @@ pub fn create_planet(
     ];
     let comb_rules = vec![ComplexResourceType::Water];
 
-    let ai: Box<MyPlanetAI> = Box::new(MyPlanetAI::new());
+    let ai: Box<OrbitronAI> = Box::new(OrbitronAI::new());
 
     Planet::new(
         0,

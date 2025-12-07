@@ -1,8 +1,12 @@
 // src/main.rs
 
-use common_game::components::planet::{Planet, PlanetType};
-use common_game::components::resource::{BasicResourceType, ComplexResourceType};
-use std::sync::mpsc;
+use common_game::components::planet::{Planet, PlanetAI, PlanetState, PlanetType};
+use common_game::components::resource::{
+    BasicResourceType, Combinator, ComplexResourceType, Generator,
+};
+use common_game::components::rocket::Rocket;
+use common_game::protocols::messages;
+use crossbeam_channel::{Receiver, Sender};
 
 mod ai;
 use ai::orbitron::MyPlanetAI;
@@ -26,9 +30,9 @@ fn main() {
 }
 
 pub fn create_planet(
-    rx_orchestrator: mpsc::Receiver<common_game::protocols::messages::OrchestratorToPlanet>,
-    tx_orchestrator: mpsc::Sender<common_game::protocols::messages::PlanetToOrchestrator>,
-    rx_explorer: mpsc::Receiver<common_game::protocols::messages::ExplorerToPlanet>,
+    rx_orchestrator: Receiver<messages::OrchestratorToPlanet>,
+    tx_orchestrator: Sender<messages::PlanetToOrchestrator>,
+    rx_explorer: Receiver<messages::ExplorerToPlanet>,
 ) -> Planet {
     let planet_type = PlanetType::B;
     let gen_rules = vec![

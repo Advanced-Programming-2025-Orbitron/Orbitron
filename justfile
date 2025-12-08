@@ -9,3 +9,6 @@ test:
 
 ci:
     just fmt && just lint && just test
+
+doc:
+    cargo doc

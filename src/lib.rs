@@ -13,6 +13,7 @@
 #![allow(rustdoc::private_intra_doc_links)]
 use common_game::components::planet::{Planet, PlanetState, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
+use common_game::logging::*;
 use common_game::protocols::messages::*;
 use crossbeam_channel::{Receiver, Sender};
 
@@ -49,7 +50,7 @@ pub fn create_planet(
     // AI logic controlling the planet's behavior.
     let ai: Box<Orbitron> = Box::new(Orbitron::new());
 
-    Planet::new(
+    let planet = Planet::new(
         planet_id,
         planet_type,
         ai,
@@ -58,7 +59,24 @@ pub fn create_planet(
         (from_orchestrator, to_orchestrator),
         from_explorer,
     )
-    .unwrap()
+    .unwrap();
+
+    // log planet creation
+    let mut payload = Payload::new();
+    payload.insert("planet_id".into(), planet_id.to_string());
+    payload.insert("planet_type".into(), format!("{planet_type:?}"));
+    LogEvent::new(
+        ActorType::User,
+        2_u32,
+        ActorType::Planet,
+        planet_id.to_string(),
+        EventType::InternalPlanetAction,
+        Channel::Info,
+        payload,
+    )
+    .emit();
+
+    planet
 }
 
 // Test for create planet sections

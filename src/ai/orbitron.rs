@@ -35,7 +35,52 @@ use common_game::components::resource::{
     GenericResource,
 };
 use common_game::components::rocket::Rocket;
+use common_game::logging::*;
 use common_game::protocols::messages::*;
+
+/// Helper functions to convert messages and responses into string names
+fn orchestrator_to_planet_name(msg: &OrchestratorToPlanet) -> String {
+    match msg {
+        OrchestratorToPlanet::Sunray(_) => "Sunray".into(),
+        OrchestratorToPlanet::InternalStateRequest => "InternalStateRequest".into(),
+        _ => "Other".into(),
+    }
+}
+
+fn planet_to_orchestrator_name(msg: &PlanetToOrchestrator) -> String {
+    match msg {
+        PlanetToOrchestrator::SunrayAck { .. } => "SunrayAck".into(),
+        PlanetToOrchestrator::InternalStateResponse { .. } => "InternalStateResponse".into(),
+        _ => "Other".into(),
+    }
+}
+
+fn explorer_to_planet_name(msg: &ExplorerToPlanet) -> String {
+    match msg {
+        ExplorerToPlanet::SupportedResourceRequest { .. } => "SupportedResourceRequest".into(),
+        ExplorerToPlanet::SupportedCombinationRequest { .. } => {
+            "SupportedCombinationRequest".into()
+        }
+        ExplorerToPlanet::GenerateResourceRequest { .. } => "GenerateResourceRequest".into(),
+        ExplorerToPlanet::CombineResourceRequest { .. } => "CombineResourceRequest".into(),
+        ExplorerToPlanet::AvailableEnergyCellRequest { .. } => "AvailableEnergyCellRequest".into(),
+    }
+}
+
+fn planet_to_explorer_name(msg: &PlanetToExplorer) -> String {
+    match msg {
+        PlanetToExplorer::SupportedResourceResponse { .. } => "SupportedResourceResponse".into(),
+        PlanetToExplorer::SupportedCombinationResponse { .. } => {
+            "SupportedCombinationResponse".into()
+        }
+        PlanetToExplorer::GenerateResourceResponse { .. } => "GenerateResourceResponse".into(),
+        PlanetToExplorer::CombineResourceResponse { .. } => "CombineResourceResponse".into(),
+        PlanetToExplorer::AvailableEnergyCellResponse { .. } => {
+            "AvailableEnergyCellResponse".into()
+        }
+        _ => "Other".into(),
+    }
+}
 
 /// Represents the AI controller for the Orbitron planet.
 ///
@@ -74,10 +119,24 @@ impl PlanetAI for Orbitron {
         _combinator: &Combinator,
         msg: OrchestratorToPlanet,
     ) -> Option<PlanetToOrchestrator> {
-        match msg {
+        // LOG incoming orchestrator message
+        let mut p = Payload::new();
+        p.insert("msg".into(), orchestrator_to_planet_name(&msg));
+        LogEvent::new(
+            ActorType::Orchestrator,
+            '0',
+            ActorType::Planet,
+            state.id().to_string(),
+            EventType::MessageOrchestratorToPlanet,
+            Channel::Info,
+            p,
+        )
+        .emit();
+
+        let response = match msg {
             OrchestratorToPlanet::Sunray(sunray) => {
-                let response = state.charge_cell(sunray);
-                match response {
+                let res = state.charge_cell(sunray);
+                match res {
                     None => Some(PlanetToOrchestrator::SunrayAck {
                         planet_id: state.id(),
                     }),
@@ -91,7 +150,25 @@ impl PlanetAI for Orbitron {
                 })
             }
             _ => None,
+        };
+
+        // Log the response if any
+        if let Some(ref r) = response {
+            let mut p = Payload::new();
+            p.insert("response".into(), planet_to_orchestrator_name(r));
+            LogEvent::new(
+                ActorType::Planet,
+                state.id(),
+                ActorType::Orchestrator,
+                '0',
+                EventType::MessagePlanetToOrchestrator,
+                Channel::Info,
+                p,
+            )
+            .emit();
         }
+
+        response
     }
     /// Handles messages from explorers.
     ///
@@ -112,7 +189,21 @@ impl PlanetAI for Orbitron {
         combinator: &Combinator,
         msg: ExplorerToPlanet,
     ) -> Option<PlanetToExplorer> {
-        match msg {
+        // Logging incoming explorer message
+        let mut p = Payload::new();
+        p.insert("msg".into(), explorer_to_planet_name(&msg));
+        LogEvent::new(
+            ActorType::Explorer,
+            1_u32,
+            ActorType::Planet,
+            state.id().to_string(),
+            EventType::MessageExplorerToPlanet,
+            Channel::Info,
+            p,
+        )
+        .emit();
+
+        let response = match msg {
             // This variant is used to ask the Planet for the available BasicResourceTypes
             ExplorerToPlanet::SupportedResourceRequest { explorer_id: _ } => {
                 Some(PlanetToExplorer::SupportedResourceResponse {
@@ -230,7 +321,24 @@ impl PlanetAI for Orbitron {
                     available_cells: cnt,
                 })
             }
+        };
+
+        if let Some(ref r) = response {
+            let mut p = Payload::new();
+            p.insert("response".into(), planet_to_explorer_name(r));
+            LogEvent::new(
+                ActorType::Planet,
+                state.id(),
+                ActorType::Explorer,
+                '1',
+                EventType::MessagePlanetToExplorer,
+                Channel::Info,
+                p,
+            )
+            .emit();
         }
+
+        response
     }
     /// This handler will be invoked when a [OrchestratorToPlanet::Asteroid]
     /// message is received.
@@ -245,23 +353,81 @@ impl PlanetAI for Orbitron {
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        let _ = state.build_rocket(1);
-        state.take_rocket()
+        // Log the incoming asteroid event
+        let mut p = Payload::new();
+        p.insert("event".into(), "AsteroidImpact".into());
+        LogEvent::new(
+            ActorType::Orchestrator,
+            0_u32,
+            ActorType::Planet,
+            state.id().to_string(),
+            EventType::InternalPlanetAction,
+            Channel::Warning,
+            p,
+        )
+        .emit();
+
+        let _ = state.build_rocket(0);
+        let rocket = state.take_rocket();
+
+        let mut p = Payload::new();
+        if rocket.is_some() {
+            p.insert("result".into(), "RocketBuilt".into());
+        } else {
+            p.insert("result".into(), "RocketFailed".into());
+        }
+        LogEvent::new(
+            ActorType::Planet,
+            state.id(),
+            ActorType::Orchestrator,
+            '0',
+            EventType::InternalPlanetAction,
+            Channel::Warning,
+            p,
+        )
+        .emit();
+        rocket
     }
 
     /// This method will be invoked when a [OrchestratorToPlanet::StartPlanetAI]
     /// is received, but only if the planet is currently in a stopped state.
     ///
     /// Start messages received when planet is already running are ignored.
-    fn start(&mut self, _state: &PlanetState) {
+    fn start(&mut self, state: &PlanetState) {
         self.is_stopped = false;
+
+        let mut p = Payload::new();
+        p.insert("event".into(), "StartPlanetAI".into());
+        LogEvent::new(
+            ActorType::Orchestrator,
+            0_u32,
+            ActorType::Planet,
+            state.id().to_string(),
+            EventType::InternalPlanetAction,
+            Channel::Info,
+            p,
+        )
+        .emit();
     }
 
     /// This method will be invoked when a [OrchestratorToPlanet::StopPlanetAI]
     /// is received, but only if the planet is currently in a running state.
     ///
     /// Stop messages received when planet is already stopped are ignored.
-    fn stop(&mut self, _state: &PlanetState) {
+    fn stop(&mut self, state: &PlanetState) {
         self.is_stopped = true;
+
+        let mut p = Payload::new();
+        p.insert("event".into(), "StopPlanetAI".into());
+        LogEvent::new(
+            ActorType::Orchestrator,
+            0_u32,
+            ActorType::Planet,
+            state.id().to_string(),
+            EventType::InternalPlanetAction,
+            Channel::Info,
+            p,
+        )
+        .emit();
     }
 }

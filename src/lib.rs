@@ -9,7 +9,7 @@
 //!
 //! The resulting configuration is passed to [`Planet::new`], which returns a
 //! fully-initialized [`Planet`] instance or reports configuration errors.
-use common_game::components::planet::{Planet, PlanetAI, PlanetType};
+use common_game::components::planet::{Planet, PlanetAI, PlanetType, PlanetState};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::protocols::messages::*;
 use crossbeam_channel::{Receiver, Sender};
@@ -69,6 +69,8 @@ pub fn create_planet(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common_game::components::planet::{Planet, PlanetAI, PlanetType, PlanetState};
+    use common_game::components::resource::{Combinator, Generator};
     use crossbeam_channel::unbounded;
 
     // Helper function to create test channels
@@ -93,6 +95,13 @@ mod tests {
             tx_expl_to_planet,
         )
     }
+    fn planet_create() -> Planet {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet_id = 42;
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
+        planet
+    }
+
     // UNIT tests for creating planet
     #[test]
     fn test_create_planet_returns_valid_planet() {
@@ -103,5 +112,18 @@ mod tests {
         assert_eq!(planet.id(), planet_id);
         // Does planet returning  planet type B?
         assert_eq!(format!("{:?}", planet.planet_type()), "B");
+    }
+    fn test_resource_creation() {
+        let mut planet = planet_create();
+        let state = &mut *planet.state();
+
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet_id = 42;
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
+        let state = planet.state();
+        let Generator = planet.generator();
+        let Combinator = planet.combinator();
+        let msg = ExplorerToPlanet::GenerateResourceRequest{explorer_id : 66, resource : BasicResourceType::Oxygen};
+        let ret = planet.ai.handle_explorer_msg(state, Generator, Combinator, msg);
     }
 }

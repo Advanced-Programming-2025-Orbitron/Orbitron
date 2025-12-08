@@ -32,49 +32,10 @@ impl PlanetAI for MyPlanetAI {
                 }
             }
 
-            OrchestratorToPlanet::Asteroid(asteroid) => Some(PlanetToOrchestrator::AsteroidAck {
-                planet_id: state.id(),
-                rocket: None,
-            }),
-
-            OrchestratorToPlanet::StartPlanetAI => {
-                self.start(state);
-                Some(PlanetToOrchestrator::StartPlanetAIResult {
-                    planet_id: state.id(),
-                })
-            }
-
-            OrchestratorToPlanet::Asteroid(asteroid) => None,
-
-            OrchestratorToPlanet::StartPlanetAI => None,
-
-            OrchestratorToPlanet::KillPlanet => None,
-
             OrchestratorToPlanet::InternalStateRequest => {
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id(),
                     planet_state: state.to_dummy(),
-                })
-            }
-
-            OrchestratorToPlanet::IncomingExplorerRequest {
-                explorer_id,
-                new_mpsc_sender,
-            } => {
-                // channel todo
-
-                Some(PlanetToOrchestrator::IncomingExplorerResponse {
-                    planet_id: state.id(),
-                    res: Ok(()),
-                })
-            }
-
-            OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id } => {
-                // channel do to
-                // is always Ok(())
-                Some(PlanetToOrchestrator::OutgoingExplorerResponse {
-                    planet_id: state.id(),
-                    res: Ok(()),
                 })
             }
 
@@ -89,7 +50,21 @@ impl PlanetAI for MyPlanetAI {
         combinator: &Combinator,
         msg: ExplorerToPlanet,
     ) -> Option<PlanetToExplorer> {
-        None
+        match msg {
+            ExplorerToPlanet::SupportedResourceRequest { explorer_id: _ } => {
+                Some(PlanetToExplorer::SupportedResourceResponse {
+                    resource_list: generator.all_available_recipes(),
+                })
+            }
+
+            ExplorerToPlanet::CombineResourceRequest { explorer_id: _ } => {
+                Some(PlanetToExplorer::SupportedCombinationResponse { combination_list: 
+                    
+                })
+            }
+
+            _ => None,
+        }
     }
 
     fn handle_asteroid(
@@ -98,7 +73,8 @@ impl PlanetAI for MyPlanetAI {
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        None
+        let _ = state.build_rocket(1);
+        state.take_rocket()
     }
 
     fn start(&mut self, state: &PlanetState) {}

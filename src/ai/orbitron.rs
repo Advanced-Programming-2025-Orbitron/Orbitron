@@ -11,7 +11,7 @@
 //! The Orbitron AI controls:
 //!
 //! - Sunray handling
-//!   Charges energy cells when possible, otherwise replies with [`SunrayAck`].
+//!   Charges energy cells when possible, otherwise replies with `SunrayAck`.
 //!
 //! - Internal state reporting*
 //!   Returns a snapshot of the current [PlanetState] when requested.
@@ -27,15 +27,13 @@
 //!   If no rocket is returned, the planet is destroyed.
 //!
 //! - Lifecycle control  
-//!   Handles [StartPlanetAI] and [StopPlanetAI] messages, enabling
+//!   Handles `StartPlanetAI` and `StopPlanetAI` messages, enabling
 //!   or disabling the decision-making logic.
-
 use common_game::components::planet::{PlanetAI, PlanetState};
 use common_game::components::resource::{
-    BasicResourceType, Combinator, ComplexResourceType, ComplexResource, ComplexResourceRequest, Generator,
+    BasicResourceType, Combinator, ComplexResource, ComplexResourceRequest, Generator,
     GenericResource,
 };
-use common_game::components::sunray::Sunray;
 use common_game::components::rocket::Rocket;
 use common_game::protocols::messages::*;
 
@@ -47,7 +45,7 @@ pub struct Orbitron {
     is_stopped: bool,
 }
 
-// Creates a new `Orbitron` AI instance.
+/// Creates a new `Orbitron` AI instance.
 ///
 /// By default, the AI starts in the stopped state and will only
 /// begin processing once explicitly started.
@@ -94,26 +92,26 @@ impl PlanetAI for Orbitron {
         msg: ExplorerToPlanet,
     ) -> Option<PlanetToExplorer> {
         match msg {
-            /// This variant is used to ask the Planet for the available BasicResourceTypes
+            // This variant is used to ask the Planet for the available BasicResourceTypes
             ExplorerToPlanet::SupportedResourceRequest { explorer_id: _ } => {
                 Some(PlanetToExplorer::SupportedResourceResponse {
                     resource_list: generator.all_available_recipes(),
                 })
             }
-            /// This variant is used to ask the Planet for the available ComplexResourceTypes
+            // This variant is used to ask the Planet for the available ComplexResourceTypes
             ExplorerToPlanet::SupportedCombinationRequest { explorer_id: _ } => {
                 Some(PlanetToExplorer::SupportedCombinationResponse {
                     combination_list: combinator.all_available_recipes(),
                 })
             }
-            /// This variant is used to ask the Planet to generate a BasicResource
+            // This variant is used to ask the Planet to generate a BasicResource
             ExplorerToPlanet::GenerateResourceRequest {
                 explorer_id: _,
                 resource,
             } => {
-                /// First, we need to check whether there is any charged cell (the `full_cell` function does this).
-                /// If there is, we then check whether the requested `BasicResourceType` is Hydrogen or Oxygen.
-                /// If it is, we generate it; otherwise, the function returns `None`.
+                // First, we need to check whether there is any charged cell (the `full_cell` function does this).
+                // If there is, we then check whether the requested `BasicResourceType` is Hydrogen or Oxygen.
+                // If it is, we generate it; otherwise, the function returns `None`.
                 let generated_resource = state.full_cell().and_then(|(cell, _)| match resource {
                     BasicResourceType::Hydrogen => generator
                         .make_hydrogen(cell)
@@ -131,20 +129,20 @@ impl PlanetAI for Orbitron {
                 })
             }
 
-            /// This variant is used to ask the Planet to generate a ComplexResource using the ComplexResourceRequest]
+            // This variant is used to ask the Planet to generate a ComplexResource using the ComplexResourceRequest]
             ExplorerToPlanet::CombineResourceRequest {
                 explorer_id: _,
                 msg,
             } => {
-                /// Same as previous function, we neeed to know if we have any charged cell or not.
+                // Same as previous function, we neeed to know if we have any charged cell or not.
                 let cell = state.full_cell();
-                
+
                 let ret: Result<ComplexResource, (String, GenericResource, GenericResource)> =
                     match msg {
-                        /// Here we match the requested complex resource type.
-                        /// Since our planet can only generate water, if the requested complex resource type is Water,
-                        /// we check whether there is any charged cell.  
-                        /// Otherwise, we return an error message.
+                        // Here we match the requested complex resource type.
+                        // Since our planet can only generate water, if the requested complex resource type is Water,
+                        // we check whether there is any charged cell.
+                        // Otherwise, we return an error message.
                         ComplexResourceRequest::Water(resource_1, resource_2) => match cell {
                             Some((cell, _)) => combinator
                                 .make_water(resource_1, resource_2, cell)
@@ -199,7 +197,7 @@ impl PlanetAI for Orbitron {
                     complex_response: ret,
                 })
             }
-            /// this function returns number of cells that are charged.
+            // this function returns number of cells that are charged.
             ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _ } => {
                 let mut cnt: u32 = 0;
                 for cell in state.cells_iter() {
@@ -213,7 +211,7 @@ impl PlanetAI for Orbitron {
             }
         }
     }
-    // This handler will be invoked when a [OrchestratorToPlanet::Asteroid]
+    /// This handler will be invoked when a [OrchestratorToPlanet::Asteroid]
     /// message is received.
     ///
     /// # Returns

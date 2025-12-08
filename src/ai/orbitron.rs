@@ -1,3 +1,35 @@
+//! # Orbitron – Planet AI Module
+//!
+//! This module implements the [PlanetAI] trait for the Orbitron planet.  
+//! It defines how the planet reacts to all types of messages coming from both
+//! the Orchestrator and Explorers, and how it handles internal game
+//! logic such as resource generation, resource combination, energy management,
+//! rocket construction, and survival after asteroid impacts.
+//!
+//! ## Responsibilities
+//!
+//! The Orbitron AI controls:
+//!
+//! - Sunray handling 
+//!   Charges energy cells when possible, otherwise replies with [`SunrayAck`].
+//!
+//! - Internal state reporting* 
+//!   Returns a snapshot of the current [PlanetState] when requested.
+//!
+//! - Explorer interactions 
+//!   * Supported recipes from the [Generator] and [Combinator]  
+//!   * Resource generation requests  
+//!   * Resource combination (including error reporting)  
+//!   * Energy cell availability
+//!
+//! - Asteroid survival logic  
+//!   Attempts to build a [Rocket] and return it.  
+//!   If no rocket is returned, the planet is destroyed.
+//!
+//! - Lifecycle control  
+//!   Handles [StartPlanetAI] and [StopPlanetAI] messages, enabling
+//!   or disabling the decision-making logic.
+
 use common_game::components::planet::{PlanetAI, PlanetState};
 use common_game::components::resource::{
     BasicResourceType, Combinator, ComplexResource, ComplexResourceRequest, Generator,
@@ -5,10 +37,19 @@ use common_game::components::resource::{
 };
 use common_game::components::rocket::Rocket;
 use common_game::protocols::messages::*;
+
+/// Represents the AI controller for the Orbitron planet.
+/// 
+/// The `is_stopped` flag indicates whether the planet's AI is currently
+/// inactive and should ignore incoming logic or requests.
 pub struct Orbitron {
     is_stopped: bool,
 }
 
+// Creates a new `Orbitron` AI instance.
+///
+/// By default, the AI starts in the stopped state and will only
+/// begin processing once explicitly started.
 impl Orbitron {
     pub fn new() -> Self {
         Self { is_stopped: true }
@@ -16,6 +57,8 @@ impl Orbitron {
 }
 
 impl PlanetAI for Orbitron {
+    /// Handler for **all** messages received by an orchestrator (receiving
+    /// end of the [ExplorerToPlanet] channel).
     fn handle_orchestrator_msg(
         &mut self,
         state: &mut PlanetState,
@@ -24,6 +67,11 @@ impl PlanetAI for Orbitron {
         msg: OrchestratorToPlanet,
     ) -> Option<PlanetToOrchestrator> {
         match msg {
+            /// This variant is used to handle Sunray msg
+            /// 
+            /// # Returns
+            ///     SunrayAck indicates Sunray is not consumed due to full energy cells
+            ///     None indicates energy cell received Sunray
             OrchestratorToPlanet::Sunray(sunray) => {
                 let response = state.charge_cell(sunray);
                 match response {
@@ -33,7 +81,8 @@ impl PlanetAI for Orbitron {
                     Some(_) => None,
                 }
             }
-
+            /// This variant is  used to handle InternalStateRequest msg
+            /// Returns planet id and planet state
             OrchestratorToPlanet::InternalStateRequest => {
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id(),
@@ -169,7 +218,13 @@ impl PlanetAI for Orbitron {
             }
         }
     }
-
+    // This handler will be invoked when a [OrchestratorToPlanet::Asteroid]
+    /// message is received.
+    /// 
+    /// # Returns
+    /// In order to survice, planet try to build rocket.
+    /// After this attempt an owned [Rocket] must be returned from this method;
+    /// if `None` is returned instead, the planet will  be destroyed by the orchestrator
     fn handle_asteroid(
         &mut self,
         state: &mut PlanetState,
@@ -180,10 +235,18 @@ impl PlanetAI for Orbitron {
         state.take_rocket()
     }
 
+    /// This method will be invoked when a [OrchestratorToPlanet::StartPlanetAI]
+    /// is received, but only if the planet is currently in a stopped state.
+    ///
+    /// Start messages received when planet is already running are ignored.
     fn start(&mut self, _state: &PlanetState) {
         self.is_stopped = false;
     }
 
+    /// This method will be invoked when a [OrchestratorToPlanet::StopPlanetAI]
+    /// is received, but only if the planet is currently in a running state.
+    ///
+    /// Stop messages received when planet is already stopped are ignored.
     fn stop(&mut self, _state: &PlanetState) {
         self.is_stopped = true;
     }

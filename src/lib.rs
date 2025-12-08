@@ -61,7 +61,7 @@ pub fn create_planet(
     )
     .unwrap();
 
-    // Optional: log planet creation
+    // log planet creation
     let mut payload = Payload::new();
     payload.insert("planet_id".into(), planet_id.to_string());
     payload.insert("planet_type".into(), format!("{planet_type:?}"));

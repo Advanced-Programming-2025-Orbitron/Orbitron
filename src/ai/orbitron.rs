@@ -245,7 +245,7 @@ impl PlanetAI for Orbitron {
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        let _ = state.build_rocket(1);
+        let _ = state.build_rocket(0);
         state.take_rocket()
     }
 

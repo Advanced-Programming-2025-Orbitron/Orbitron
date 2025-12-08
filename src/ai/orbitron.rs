@@ -146,8 +146,14 @@ impl PlanetAI for Orbitron {
             }
 
             ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _ } => {
+                let mut cnt: u32 = 0;
+                for cell in state.cells_iter() {
+                    if cell.is_charged() {
+                        cnt += 1;
+                    }
+                }
                 Some(PlanetToExplorer::AvailableEnergyCellResponse {
-                    available_cells: state.cells_count() as u32,
+                    available_cells: cnt,
                 })
             }
         }

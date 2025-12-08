@@ -2,14 +2,16 @@
 //!
 //! This module exposes the [`create_planet`] function, which the orchestrator
 //! calls to spawn an instance of the Orbitron planet. It sets up:
-//! - the planet type,
-//! - its AI implementation, which implements the [`PlanetAI`] trait,
-//! - resource generation and combination rules,
+//! - the planet type B,
+//! - its AI implementation, which implements the `PlanetAI` trait,
+//! - resource generation for `Hydrogyn` and `Oxygen`
+//! - combination rules for `Water`
 //! - and communication channels to/from orchestrator and explorers.
 //!
 //! The resulting configuration is passed to [`Planet::new`], which returns a
 //! fully-initialized [`Planet`] instance or reports configuration errors.
-use common_game::components::planet::{Planet, PlanetAI, PlanetType, PlanetState};
+#![allow(rustdoc::private_intra_doc_links)]
+use common_game::components::planet::{Planet, PlanetState, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::protocols::messages::*;
 use crossbeam_channel::{Receiver, Sender};
@@ -33,11 +35,6 @@ use ai::orbitron::Orbitron;
 /// - [`Orbitron`] as the AI controlling this planet  
 ///
 /// The function returns a fully constructed [`Planet`] instance.  
-/// If the configuration violates any game constraints, the function will panic.
-///
-/// # Panics
-/// Panics with `"Invalid planet configuration – check constraints!"`  
-/// if `Planet::new` rejects the provided rules or AI.
 pub fn create_planet(
     from_orchestrator: Receiver<OrchestratorToPlanet>,
     to_orchestrator: Sender<PlanetToOrchestrator>,
@@ -61,17 +58,15 @@ pub fn create_planet(
         (from_orchestrator, to_orchestrator),
         from_explorer,
     )
-    .expect("Invalid planet configuration – check constraints!")
+    .unwrap()
 }
 
 // Test for create planet sections
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use common_game::components::planet::{Planet, PlanetAI, PlanetType, PlanetState};
     use common_game::components::resource::{Combinator, Generator};
-    use crossbeam_channel::unbounded;
+    use crossbeam_channel::bounded;
 
     // Helper function to create test channels
     fn setup_test_channels() -> (
@@ -82,9 +77,9 @@ mod tests {
         Receiver<PlanetToOrchestrator>,
         Sender<ExplorerToPlanet>,
     ) {
-        let (tx_orch_to_planet, rx_orch_to_planet) = unbounded::<OrchestratorToPlanet>();
-        let (tx_planet_to_orch, rx_planet_to_orch) = unbounded::<PlanetToOrchestrator>();
-        let (tx_expl_to_planet, rx_expl_to_planet) = unbounded::<ExplorerToPlanet>();
+        let (tx_orch_to_planet, rx_orch_to_planet) = bounded::<OrchestratorToPlanet>(100);
+        let (tx_planet_to_orch, rx_planet_to_orch) = bounded::<PlanetToOrchestrator>(100);
+        let (tx_expl_to_planet, rx_expl_to_planet) = bounded::<ExplorerToPlanet>(100);
 
         (
             rx_orch_to_planet,
@@ -108,22 +103,100 @@ mod tests {
         let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
         let planet_id = 42;
         let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
-        // Planet id
+        // Planet should have a planet_id
         assert_eq!(planet.id(), planet_id);
-        // Does planet returning  planet type B?
+        // Planet type should be B
         assert_eq!(format!("{:?}", planet.planet_type()), "B");
     }
-    fn test_resource_creation() {
-        let mut planet = planet_create();
-        let state = &mut *planet.state();
-
+    // Test for Type B constraints
+    #[test]
+    fn test_create_planet_has_correct_type_b_constraints() {
         let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
-        let planet_id = 42;
-        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, 1);
+        let available_recipes: std::collections::HashSet<BasicResourceType> =
+            planet.generator().all_available_recipes();
+        // Orbitron should have one energy cell
+        assert_eq!(planet.state().cells_count(), 1);
+        //Orbitron  should not contain rocket
+        assert!(!planet.state().can_have_rocket());
+        // Resource generation should contain only  Hydrogen and Oxygen
+        assert_eq!(available_recipes.len(), 2);
+        assert!(available_recipes.contains(&BasicResourceType::Hydrogen));
+        assert!(available_recipes.contains(&BasicResourceType::Oxygen));
+    }
+    #[test]
+    fn test_create_planet_has_correct_combination_rules() {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, 1);
+        let available_combinations = planet.combinator().all_available_recipes();
+        // Should have Water combination
+        assert_eq!(available_combinations.len(), 1);
+        assert!(available_combinations.contains(&ComplexResourceType::Water));
+    }
+    #[test]
+    fn test_explorer_msg() {
+        fn handle_explorer_msg(
+            state: &PlanetState,
+            generator: &Generator,
+            combinator: &Combinator,
+            msg: ExplorerToPlanet,
+        ) -> Option<PlanetToExplorer> {
+            match msg {
+                // This variant is used to ask the Planet for the available BasicResourceTypes
+                ExplorerToPlanet::SupportedResourceRequest { explorer_id: _ } => {
+                    Some(PlanetToExplorer::SupportedResourceResponse {
+                        resource_list: generator.all_available_recipes(),
+                    })
+                }
+                // This variant is used to ask the Planet for the available ComplexResourceTypes
+                ExplorerToPlanet::SupportedCombinationRequest { explorer_id: _ } => {
+                    Some(PlanetToExplorer::SupportedCombinationResponse {
+                        combination_list: combinator.all_available_recipes(),
+                    })
+                }
+                // this function returns number of cells that are charged.
+                ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _ } => {
+                    let mut cnt: u32 = 0;
+                    for cell in state.cells_iter() {
+                        if cell.is_charged() {
+                            cnt += 1;
+                        }
+                    }
+                    Some(PlanetToExplorer::AvailableEnergyCellResponse {
+                        available_cells: cnt,
+                    })
+                }
+                _ => None,
+            }
+        }
+        let planet = planet_create();
         let state = planet.state();
-        let Generator = planet.generator();
-        let Combinator = planet.combinator();
-        let msg = ExplorerToPlanet::GenerateResourceRequest{explorer_id : 66, resource : BasicResourceType::Oxygen};
-        let ret = planet.ai.handle_explorer_msg(state, Generator, Combinator, msg);
+        let generator = planet.generator();
+        let combinator = planet.combinator();
+        let msg = ExplorerToPlanet::SupportedResourceRequest { explorer_id: 1 };
+        let response = handle_explorer_msg(state, generator, combinator, msg);
+        match response {
+            Some(PlanetToExplorer::SupportedResourceResponse { resource_list }) => {
+                assert_eq!(resource_list, generator.all_available_recipes());
+            }
+            _ => panic!("Unexpected response"),
+        }
+        let msg = ExplorerToPlanet::SupportedCombinationRequest { explorer_id: 2 };
+        let response = handle_explorer_msg(state, generator, combinator, msg);
+        match response {
+            Some(PlanetToExplorer::SupportedCombinationResponse { combination_list }) => {
+                assert_eq!(combination_list, combinator.all_available_recipes());
+            }
+            _ => panic!("Unexpected response"),
+        }
+        let cnt = state.cells_iter().filter(|cell| cell.is_charged()).count() as u32;
+        let msg = ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: 3 };
+        let response = handle_explorer_msg(state, generator, combinator, msg);
+        match response {
+            Some(PlanetToExplorer::AvailableEnergyCellResponse { available_cells: c }) => {
+                assert_eq!(cnt, c);
+            }
+            _ => panic!("Unexpected response"),
+        }
     }
 }

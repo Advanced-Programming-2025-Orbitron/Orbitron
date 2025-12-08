@@ -57,7 +57,16 @@ impl Orbitron {
 
 impl PlanetAI for Orbitron {
     /// Handler for **all** messages received by an orchestrator (receiving
-    /// end of the [ExplorerToPlanet] channel).
+    /// end of the [OrchestratorToPlanet] channel).
+    /// 
+    /// [OrchestratorToPlanet::Sunray]-This variant is used to handle Sunray msg
+    /// # Returns
+    ///     SunrayAck indicates Sunray is not consumed due to full energy cells
+    ///     None indicates energy cell received Sunray
+    /// 
+    /// [OrchestratorToPlanet::InternalStateRequest]-This variant is  used to handle InternalStateRequest msg
+    /// # Returns 
+    ///     Planet id and planet state
     fn handle_orchestrator_msg(
         &mut self,
         state: &mut PlanetState,

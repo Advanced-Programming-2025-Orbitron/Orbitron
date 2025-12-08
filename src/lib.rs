@@ -66,7 +66,7 @@ pub fn create_planet(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossbeam_channel::unbounded;
+    use crossbeam_channel::bounded;
 
     // Helper function to create test channels
     fn setup_test_channels() -> (
@@ -77,9 +77,9 @@ mod tests {
         Receiver<PlanetToOrchestrator>,
         Sender<ExplorerToPlanet>,
     ) {
-        let (tx_orch_to_planet, rx_orch_to_planet) = unbounded::<OrchestratorToPlanet>();
-        let (tx_planet_to_orch, rx_planet_to_orch) = unbounded::<PlanetToOrchestrator>();
-        let (tx_expl_to_planet, rx_expl_to_planet) = unbounded::<ExplorerToPlanet>();
+        let (tx_orch_to_planet, rx_orch_to_planet) = bounded::<OrchestratorToPlanet>(100);
+        let (tx_planet_to_orch, rx_planet_to_orch) = bounded::<PlanetToOrchestrator>(100);
+        let (tx_expl_to_planet, rx_expl_to_planet) = bounded::<ExplorerToPlanet>(100);
 
         (
             rx_orch_to_planet,

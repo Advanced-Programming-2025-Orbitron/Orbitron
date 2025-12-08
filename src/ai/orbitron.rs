@@ -162,7 +162,7 @@ impl PlanetAI for Orbitron {
         let _ = state.build_rocket(1);
         state.take_rocket()
     }
-    
+
     fn start(&mut self, _state: &PlanetState) {
         self.is_stopped = false;
     }

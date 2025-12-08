@@ -161,7 +161,7 @@ impl PlanetAI for Orbitron {
     ) -> Option<Rocket> {
         None
     }
-
+    
     fn start(&mut self, _state: &PlanetState) {
         self.is_stopped = false;
     }

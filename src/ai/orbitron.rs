@@ -84,6 +84,18 @@ impl PlanetAI for Orbitron {
             _ => None,
         }
     }
+    /// Handles messages from explorers.
+    ///
+    /// - Provides supported basic and complex resource types
+    /// - Generates requested basic resources (Hydrogen or Oxygen).  
+    ///   First, we check whether there is any charged cell (the `full_cell` function does this).  
+    ///   If there is, we then check whether the requested `BasicResourceType` is Hydrogen or Oxygen.  
+    ///   If it is, we generate it; otherwise, the function returns `None`.
+    /// - Generates Water as the only supported complex resource.  
+    ///   As before, we must check whether there is a charged cell.  
+    ///   Since the planet can only generate water, if the requested complex resource type is `Water`,
+    ///   we proceed with generation; otherwise, we return an error message.
+    /// - Returns the number of available charged energy cells.
     fn handle_explorer_msg(
         &mut self,
         state: &mut PlanetState,

@@ -2,14 +2,16 @@
 //!
 //! This module exposes the [`create_planet`] function, which the orchestrator
 //! calls to spawn an instance of the Orbitron planet. It sets up:
-//! - the planet type,
-//! - its AI implementation, which implements the [`PlanetAI`] trait,
-//! - resource generation and combination rules,
+//! - the planet type B,
+//! - its AI implementation, which implements the `PlanetAI` trait,
+//! - resource generation for `Hydrogyn` and `Oxygen`
+//! - combination rules for `Water`
 //! - and communication channels to/from orchestrator and explorers.
 //!
 //! The resulting configuration is passed to [`Planet::new`], which returns a
 //! fully-initialized [`Planet`] instance or reports configuration errors.
-use common_game::components::planet::{Planet, PlanetAI, PlanetType};
+#![allow(rustdoc::private_intra_doc_links)]
+use common_game::components::planet::{Planet, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::protocols::messages::*;
 use crossbeam_channel::{Receiver, Sender};
@@ -33,11 +35,6 @@ use ai::orbitron::Orbitron;
 /// - [`Orbitron`] as the AI controlling this planet  
 ///
 /// The function returns a fully constructed [`Planet`] instance.  
-/// If the configuration violates any game constraints, the function will panic.
-///
-/// # Panics
-/// Panics with `"Invalid planet configuration – check constraints!"`  
-/// if `Planet::new` rejects the provided rules or AI.
 pub fn create_planet(
     from_orchestrator: Receiver<OrchestratorToPlanet>,
     to_orchestrator: Sender<PlanetToOrchestrator>,
@@ -61,7 +58,7 @@ pub fn create_planet(
         (from_orchestrator, to_orchestrator),
         from_explorer,
     )
-    .expect("Invalid planet configuration – check constraints!")
+    .unwrap()
 }
 
 // Test for create planet sections

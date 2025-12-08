@@ -11,7 +11,7 @@
 //! The resulting configuration is passed to [`Planet::new`], which returns a
 //! fully-initialized [`Planet`] instance or reports configuration errors.
 #![allow(rustdoc::private_intra_doc_links)]
-use common_game::components::planet::{Planet, PlanetType};
+use common_game::components::planet::{Planet, PlanetState, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::*;
 use common_game::protocols::messages::*;
@@ -83,6 +83,7 @@ pub fn create_planet(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common_game::components::resource::{Combinator, Generator};
     use crossbeam_channel::bounded;
 
     // Helper function to create test channels
@@ -107,6 +108,13 @@ mod tests {
             tx_expl_to_planet,
         )
     }
+    fn planet_create() -> Planet {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet_id = 42;
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
+        planet
+    }
+
     // UNIT tests for creating planet
     #[test]
     fn test_create_planet_returns_valid_planet() {
@@ -142,5 +150,71 @@ mod tests {
         // Should have Water combination
         assert_eq!(available_combinations.len(), 1);
         assert!(available_combinations.contains(&ComplexResourceType::Water));
+    }
+    #[test]
+    fn test_explorer_msg() {
+        fn handle_explorer_msg(
+            state: &PlanetState,
+            generator: &Generator,
+            combinator: &Combinator,
+            msg: ExplorerToPlanet,
+        ) -> Option<PlanetToExplorer> {
+            match msg {
+                // This variant is used to ask the Planet for the available BasicResourceTypes
+                ExplorerToPlanet::SupportedResourceRequest { explorer_id: _ } => {
+                    Some(PlanetToExplorer::SupportedResourceResponse {
+                        resource_list: generator.all_available_recipes(),
+                    })
+                }
+                // This variant is used to ask the Planet for the available ComplexResourceTypes
+                ExplorerToPlanet::SupportedCombinationRequest { explorer_id: _ } => {
+                    Some(PlanetToExplorer::SupportedCombinationResponse {
+                        combination_list: combinator.all_available_recipes(),
+                    })
+                }
+                // this function returns number of cells that are charged.
+                ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _ } => {
+                    let mut cnt: u32 = 0;
+                    for cell in state.cells_iter() {
+                        if cell.is_charged() {
+                            cnt += 1;
+                        }
+                    }
+                    Some(PlanetToExplorer::AvailableEnergyCellResponse {
+                        available_cells: cnt,
+                    })
+                }
+                _ => None,
+            }
+        }
+        let planet = planet_create();
+        let state = planet.state();
+        let generator = planet.generator();
+        let combinator = planet.combinator();
+        let msg = ExplorerToPlanet::SupportedResourceRequest { explorer_id: 1 };
+        let response = handle_explorer_msg(state, generator, combinator, msg);
+        match response {
+            Some(PlanetToExplorer::SupportedResourceResponse { resource_list }) => {
+                assert_eq!(resource_list, generator.all_available_recipes());
+            }
+            _ => panic!("Unexpected response"),
+        }
+        let msg = ExplorerToPlanet::SupportedCombinationRequest { explorer_id: 2 };
+        let response = handle_explorer_msg(state, generator, combinator, msg);
+        match response {
+            Some(PlanetToExplorer::SupportedCombinationResponse { combination_list }) => {
+                assert_eq!(combination_list, combinator.all_available_recipes());
+            }
+            _ => panic!("Unexpected response"),
+        }
+        let cnt = state.cells_iter().filter(|cell| cell.is_charged()).count() as u32;
+        let msg = ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: 3 };
+        let response = handle_explorer_msg(state, generator, combinator, msg);
+        match response {
+            Some(PlanetToExplorer::AvailableEnergyCellResponse { available_cells: c }) => {
+                assert_eq!(cnt, c);
+            }
+            _ => panic!("Unexpected response"),
+        }
     }
 }

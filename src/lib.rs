@@ -33,11 +33,6 @@ use ai::orbitron::Orbitron;
 /// - [`Orbitron`] as the AI controlling this planet  
 ///
 /// The function returns a fully constructed [`Planet`] instance.  
-/// If the configuration violates any game constraints, the function will panic.
-///
-/// # Panics
-/// Panics with `"Invalid planet configuration – check constraints!"`  
-/// if `Planet::new` rejects the provided rules or AI.
 pub fn create_planet(
     from_orchestrator: Receiver<OrchestratorToPlanet>,
     to_orchestrator: Sender<PlanetToOrchestrator>,
@@ -61,5 +56,5 @@ pub fn create_planet(
         (from_orchestrator, to_orchestrator),
         from_explorer,
     )
-    .expect("Invalid planet configuration – check constraints!")
+    .unwrap()
 }

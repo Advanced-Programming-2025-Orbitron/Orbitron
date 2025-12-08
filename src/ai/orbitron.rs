@@ -10,13 +10,13 @@
 //!
 //! The Orbitron AI controls:
 //!
-//! - Sunray handling 
+//! - Sunray handling
 //!   Charges energy cells when possible, otherwise replies with [`SunrayAck`].
 //!
-//! - Internal state reporting* 
+//! - Internal state reporting*
 //!   Returns a snapshot of the current [PlanetState] when requested.
 //!
-//! - Explorer interactions 
+//! - Explorer interactions
 //!   * Supported recipes from the [Generator] and [Combinator]  
 //!   * Resource generation requests  
 //!   * Resource combination (including error reporting)  
@@ -39,7 +39,7 @@ use common_game::components::rocket::Rocket;
 use common_game::protocols::messages::*;
 
 /// Represents the AI controller for the Orbitron planet.
-/// 
+///
 /// The `is_stopped` flag indicates whether the planet's AI is currently
 /// inactive and should ignore incoming logic or requests.
 pub struct Orbitron {
@@ -67,11 +67,6 @@ impl PlanetAI for Orbitron {
         msg: OrchestratorToPlanet,
     ) -> Option<PlanetToOrchestrator> {
         match msg {
-            /// This variant is used to handle Sunray msg
-            /// 
-            /// # Returns
-            ///     SunrayAck indicates Sunray is not consumed due to full energy cells
-            ///     None indicates energy cell received Sunray
             OrchestratorToPlanet::Sunray(sunray) => {
                 let response = state.charge_cell(sunray);
                 match response {
@@ -81,8 +76,6 @@ impl PlanetAI for Orbitron {
                     Some(_) => None,
                 }
             }
-            /// This variant is  used to handle InternalStateRequest msg
-            /// Returns planet id and planet state
             OrchestratorToPlanet::InternalStateRequest => {
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id(),
@@ -209,7 +202,7 @@ impl PlanetAI for Orbitron {
     }
     // This handler will be invoked when a [OrchestratorToPlanet::Asteroid]
     /// message is received.
-    /// 
+    ///
     /// # Returns
     /// In order to survice, planet try to build rocket.
     /// After this attempt an owned [Rocket] must be returned from this method;

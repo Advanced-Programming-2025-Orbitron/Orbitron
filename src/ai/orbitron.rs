@@ -161,11 +161,12 @@ impl PlanetAI for Orbitron {
 
     fn handle_asteroid(
         &mut self,
-        _state: &mut PlanetState,
+        state: &mut PlanetState,
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        None
+        let _ = state.build_rocket(1);
+        state.take_rocket()
     }
 
     fn start(&mut self, _state: &PlanetState) {

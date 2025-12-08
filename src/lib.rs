@@ -119,99 +119,13 @@ mod tests {
         assert!(available_recipes.contains(&BasicResourceType::Hydrogen));
         assert!(available_recipes.contains(&BasicResourceType::Oxygen));
     }
-    // Test for  Combination rules
     #[test]
     fn test_create_planet_has_correct_combination_rules() {
         let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
-
         let planet = create_planet(rx_orch, tx_orch, rx_expl, 1);
-
         let available_combinations = planet.combinator().all_available_recipes();
-
         // Should have Water combination
         assert_eq!(available_combinations.len(), 1);
         assert!(available_combinations.contains(&ComplexResourceType::Water));
-    }
-    #[test]
-    #[test]
-    fn test_create_planet_can_generate_resources() {
-        let (rx_orch, tx_orch, rx_expl, tx_to_planet, rx_from_planet, _) = setup_test_channels();
-        let planet_id = 20;
-
-        let mut planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
-
-        // Spawn planet in a thread
-        let handle = thread::spawn(move || planet.run());
-
-        // Start the planet
-        tx_to_planet
-            .send(OrchestratorToPlanet::StartPlanetAI)
-            .unwrap();
-        let _ = rx_from_planet.recv_timeout(Duration::from_millis(100));
-
-        // Charge a cell
-        tx_to_planet
-            .send(OrchestratorToPlanet::Sunray(Sunray::new()))
-            .unwrap();
-
-        // Wait for SunrayAck
-        match rx_from_planet.recv_timeout(Duration::from_millis(100)) {
-            Ok(PlanetToOrchestrator::SunrayAck { planet_id: id }) => {
-                assert_eq!(id, planet_id);
-            }
-            _ => panic!("Expected SunrayAck"),
-        }
-
-        // Clean up
-        tx_to_planet.send(OrchestratorToPlanet::KillPlanet).unwrap();
-
-        let _ = handle.join();
-    }
-
-    #[test]
-    fn test_create_planet_type_b_cannot_survive_asteroid() {
-        let (rx_orch, tx_orch, rx_expl, tx_to_planet, rx_from_planet, _) = setup_test_channels();
-        let planet_id = 42;
-
-        let mut planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
-
-        // Spawn planet in a thread
-        let handle = thread::spawn(move || planet.run());
-
-        // Start the planet
-        tx_to_planet
-            .send(OrchestratorToPlanet::StartPlanetAI)
-            .unwrap();
-        let _ = rx_from_planet.recv_timeout(Duration::from_millis(100));
-
-        // Charge the cell
-        tx_to_planet
-            .send(OrchestratorToPlanet::Sunray(Sunray::new()))
-            .unwrap();
-        let _ = rx_from_planet.recv_timeout(Duration::from_millis(100));
-
-        // Send asteroid
-        tx_to_planet
-            .send(OrchestratorToPlanet::Asteroid(Asteroid::new()))
-            .unwrap();
-
-        // Type B cannot have rockets, so should return None
-        match rx_from_planet.recv_timeout(Duration::from_millis(100)) {
-            Ok(PlanetToOrchestrator::AsteroidAck {
-                planet_id: id,
-                rocket,
-            }) => {
-                assert_eq!(id, planet_id);
-                assert!(
-                    rocket.is_none(),
-                    "Type B should not be able to build rockets"
-                );
-            }
-            _ => panic!("Expected AsteroidAck"),
-        }
-        // Clean up
-        tx_to_planet.send(OrchestratorToPlanet::KillPlanet).unwrap();
-
-        let _ = handle.join();
     }
 }

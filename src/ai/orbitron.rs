@@ -146,8 +146,14 @@ impl PlanetAI for Orbitron {
             }
 
             ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _ } => {
+                let mut cnt: u32 = 0;
+                for cell in state.cells_iter() {
+                    if cell.is_charged() {
+                        cnt += 1;
+                    }
+                }
                 Some(PlanetToExplorer::AvailableEnergyCellResponse {
-                    available_cells: state.cells_count() as u32,
+                    available_cells: cnt,
                 })
             }
         }
@@ -155,11 +161,12 @@ impl PlanetAI for Orbitron {
 
     fn handle_asteroid(
         &mut self,
-        _state: &mut PlanetState,
+        state: &mut PlanetState,
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        None
+        let _ = state.build_rocket(1);
+        state.take_rocket()
     }
 
     fn start(&mut self, _state: &PlanetState) {

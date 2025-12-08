@@ -1,4 +1,4 @@
-# 🌍 Orbitron Planet
+# 🌍 Planet Orbitron
 
 > *A sophisticated planet implementation*
 
@@ -18,8 +18,6 @@ Our planet is configured with the following capabilities:
 **Resource Generation:**
 - 🔵 Hydrogen
 - ⚪ Oxygen
-- ⚫ Carbon
-- 🔶 Silicon
 
 **Resource Combination:**
 - 💧 Water (H₂O)
@@ -65,7 +63,7 @@ To be written!
 ## 📝 Development Notes
 
 The implementation follows a clean separation of concerns:
-- `main.rs`: Initialization and entry point
+- `lib.rs`: Creates the planet
 - `ai/orbitron.rs`: Core AI logic (implement here!)
 To be written!
 

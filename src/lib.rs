@@ -2,14 +2,16 @@
 //!
 //! This module exposes the [`create_planet`] function, which the orchestrator
 //! calls to spawn an instance of the Orbitron planet. It sets up:
-//! - the planet type,
-//! - its AI implementation, which implements the [`PlanetAI`] trait,
-//! - resource generation and combination rules,
+//! - the planet type B,
+//! - its AI implementation, which implements the `PlanetAI` trait,
+//! - resource generation for `Hydrogyn` and `Oxygen`
+//! - combination rules for `Water`
 //! - and communication channels to/from orchestrator and explorers.
 //!
 //! The resulting configuration is passed to [`Planet::new`], which returns a
 //! fully-initialized [`Planet`] instance or reports configuration errors.
-use common_game::components::planet::{Planet, PlanetAI, PlanetType};
+#![allow(rustdoc::private_intra_doc_links)]
+use common_game::components::planet::{Planet, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::protocols::messages::*;
 use crossbeam_channel::{Receiver, Sender};
@@ -33,11 +35,6 @@ use ai::orbitron::Orbitron;
 /// - [`Orbitron`] as the AI controlling this planet  
 ///
 /// The function returns a fully constructed [`Planet`] instance.  
-/// If the configuration violates any game constraints, the function will panic.
-///
-/// # Panics
-/// Panics with `"Invalid planet configuration – check constraints!"`  
-/// if `Planet::new` rejects the provided rules or AI.
 pub fn create_planet(
     from_orchestrator: Receiver<OrchestratorToPlanet>,
     to_orchestrator: Sender<PlanetToOrchestrator>,
@@ -61,14 +58,14 @@ pub fn create_planet(
         (from_orchestrator, to_orchestrator),
         from_explorer,
     )
-    .expect("Invalid planet configuration – check constraints!")
+    .unwrap()
 }
 
 // Test for create planet sections
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossbeam_channel::unbounded;
+    use crossbeam_channel::bounded;
 
     // Helper function to create test channels
     fn setup_test_channels() -> (
@@ -79,9 +76,9 @@ mod tests {
         Receiver<PlanetToOrchestrator>,
         Sender<ExplorerToPlanet>,
     ) {
-        let (tx_orch_to_planet, rx_orch_to_planet) = unbounded::<OrchestratorToPlanet>();
-        let (tx_planet_to_orch, rx_planet_to_orch) = unbounded::<PlanetToOrchestrator>();
-        let (tx_expl_to_planet, rx_expl_to_planet) = unbounded::<ExplorerToPlanet>();
+        let (tx_orch_to_planet, rx_orch_to_planet) = bounded::<OrchestratorToPlanet>(100);
+        let (tx_planet_to_orch, rx_planet_to_orch) = bounded::<PlanetToOrchestrator>(100);
+        let (tx_expl_to_planet, rx_expl_to_planet) = bounded::<ExplorerToPlanet>(100);
 
         (
             rx_orch_to_planet,

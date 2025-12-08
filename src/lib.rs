@@ -78,3 +78,69 @@ pub fn create_planet(
 
     planet
 }
+
+// Test for create planet sections
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossbeam_channel::bounded;
+
+    // Helper function to create test channels
+    fn setup_test_channels() -> (
+        Receiver<OrchestratorToPlanet>,
+        Sender<PlanetToOrchestrator>,
+        Receiver<ExplorerToPlanet>,
+        Sender<OrchestratorToPlanet>,
+        Receiver<PlanetToOrchestrator>,
+        Sender<ExplorerToPlanet>,
+    ) {
+        let (tx_orch_to_planet, rx_orch_to_planet) = bounded::<OrchestratorToPlanet>(100);
+        let (tx_planet_to_orch, rx_planet_to_orch) = bounded::<PlanetToOrchestrator>(100);
+        let (tx_expl_to_planet, rx_expl_to_planet) = bounded::<ExplorerToPlanet>(100);
+
+        (
+            rx_orch_to_planet,
+            tx_planet_to_orch,
+            rx_expl_to_planet,
+            tx_orch_to_planet,
+            rx_planet_to_orch,
+            tx_expl_to_planet,
+        )
+    }
+    // UNIT tests for creating planet
+    #[test]
+    fn test_create_planet_returns_valid_planet() {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet_id = 42;
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
+        // Planet should have a planet_id
+        assert_eq!(planet.id(), planet_id);
+        // Planet type should be B
+        assert_eq!(format!("{:?}", planet.planet_type()), "B");
+    }
+    // Test for Type B constraints
+    #[test]
+    fn test_create_planet_has_correct_type_b_constraints() {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, 1);
+        let available_recipes: std::collections::HashSet<BasicResourceType> =
+            planet.generator().all_available_recipes();
+        // Orbitron should have one energy cell
+        assert_eq!(planet.state().cells_count(), 1);
+        //Orbitron  should not contain rocket
+        assert!(!planet.state().can_have_rocket());
+        // Resource generation should contain only  Hydrogen and Oxygen
+        assert_eq!(available_recipes.len(), 2);
+        assert!(available_recipes.contains(&BasicResourceType::Hydrogen));
+        assert!(available_recipes.contains(&BasicResourceType::Oxygen));
+    }
+    #[test]
+    fn test_create_planet_has_correct_combination_rules() {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, 1);
+        let available_combinations = planet.combinator().all_available_recipes();
+        // Should have Water combination
+        assert_eq!(available_combinations.len(), 1);
+        assert!(available_combinations.contains(&ComplexResourceType::Water));
+    }
+}

@@ -38,47 +38,53 @@ use common_game::components::rocket::Rocket;
 use common_game::logging::*;
 use common_game::protocols::messages::*;
 
+/// Set channels for incoming/outgoing messages
+const RCV_MSG_CHNL: Channel = Channel::Debug;
+const ACK_MSG_CHNL: Channel = Channel::Debug;
+
 /// Helper functions to convert messages and responses into string names
 fn orchestrator_to_planet_name(msg: &OrchestratorToPlanet) -> String {
     match msg {
         OrchestratorToPlanet::Sunray(_) => "Sunray".into(),
-        OrchestratorToPlanet::InternalStateRequest => "InternalStateRequest".into(),
-        _ => "Other".into(),
+        OrchestratorToPlanet::InternalStateRequest => "Internal State Request".into(),
+        _ => "Unexpected Message".into(),
     }
 }
-
+/// Helper functions to convert messages and responses into string names
 fn planet_to_orchestrator_name(msg: &PlanetToOrchestrator) -> String {
     match msg {
-        PlanetToOrchestrator::SunrayAck { .. } => "SunrayAck".into(),
-        PlanetToOrchestrator::InternalStateResponse { .. } => "InternalStateResponse".into(),
-        _ => "Other".into(),
+        PlanetToOrchestrator::SunrayAck { .. } => "Sunray Ack".into(),
+        PlanetToOrchestrator::InternalStateResponse { .. } => "Internal State Response".into(),
+        _ => "Unexpected Message".into(),
     }
 }
-
+/// Helper functions to convert messages and responses into string names
 fn explorer_to_planet_name(msg: &ExplorerToPlanet) -> String {
     match msg {
-        ExplorerToPlanet::SupportedResourceRequest { .. } => "SupportedResourceRequest".into(),
+        ExplorerToPlanet::SupportedResourceRequest { .. } => "Supported Resource Request".into(),
         ExplorerToPlanet::SupportedCombinationRequest { .. } => {
-            "SupportedCombinationRequest".into()
+            "Supported Combination Request".into()
         }
-        ExplorerToPlanet::GenerateResourceRequest { .. } => "GenerateResourceRequest".into(),
-        ExplorerToPlanet::CombineResourceRequest { .. } => "CombineResourceRequest".into(),
-        ExplorerToPlanet::AvailableEnergyCellRequest { .. } => "AvailableEnergyCellRequest".into(),
+        ExplorerToPlanet::GenerateResourceRequest { .. } => "Generate Resource Request".into(),
+        ExplorerToPlanet::CombineResourceRequest { .. } => "Combine Resource Request".into(),
+        ExplorerToPlanet::AvailableEnergyCellRequest { .. } => {
+            "Available Energy Cell Request".into()
+        }
     }
 }
-
+/// Helper functions to convert messages and responses into string names
 fn planet_to_explorer_name(msg: &PlanetToExplorer) -> String {
     match msg {
-        PlanetToExplorer::SupportedResourceResponse { .. } => "SupportedResourceResponse".into(),
+        PlanetToExplorer::SupportedResourceResponse { .. } => "Supported Resource Response".into(),
         PlanetToExplorer::SupportedCombinationResponse { .. } => {
-            "SupportedCombinationResponse".into()
+            "Supported Combination Response".into()
         }
-        PlanetToExplorer::GenerateResourceResponse { .. } => "GenerateResourceResponse".into(),
-        PlanetToExplorer::CombineResourceResponse { .. } => "CombineResourceResponse".into(),
+        PlanetToExplorer::GenerateResourceResponse { .. } => "Generate Resource Response".into(),
+        PlanetToExplorer::CombineResourceResponse { .. } => "Combine Resource Response".into(),
         PlanetToExplorer::AvailableEnergyCellResponse { .. } => {
-            "AvailableEnergyCellResponse".into()
+            "Available Energy Cell Response".into()
         }
-        _ => "Other".into(),
+        _ => "Unexpected Message".into(),
     }
 }
 
@@ -96,6 +102,20 @@ pub struct Orbitron {
 /// begin processing once explicitly started.
 impl Orbitron {
     pub fn new() -> Self {
+        // LOG internal ai creation
+        let mut payload = Payload::new();
+        payload.insert("Message".into(), "New AI orbitron created".into());
+        LogEvent::new(
+            ActorType::Planet,
+            0u64,
+            ActorType::Planet,
+            '0',
+            EventType::InternalPlanetAction,
+            Channel::Info,
+            payload,
+        )
+        .emit();
+
         Self { is_stopped: true }
     }
 }
@@ -120,50 +140,71 @@ impl PlanetAI for Orbitron {
         msg: OrchestratorToPlanet,
     ) -> Option<PlanetToOrchestrator> {
         // LOG incoming orchestrator message
-        let mut p = Payload::new();
-        p.insert("msg".into(), orchestrator_to_planet_name(&msg));
+        let mut payload = Payload::new();
+        payload.insert("Message".into(), orchestrator_to_planet_name(&msg));
         LogEvent::new(
             ActorType::Orchestrator,
-            '0',
+            0_u64,
             ActorType::Planet,
             state.id().to_string(),
             EventType::MessageOrchestratorToPlanet,
-            Channel::Info,
-            p,
+            RCV_MSG_CHNL,
+            payload,
         )
         .emit();
 
+        // LOG orchestrator message result
+        let mut payload = Payload::new();
+
         let response = match msg {
             OrchestratorToPlanet::Sunray(sunray) => {
-                let res = state.charge_cell(sunray);
-                match res {
-                    None => Some(PlanetToOrchestrator::SunrayAck {
-                        planet_id: state.id(),
-                    }),
-                    Some(_) => None,
+                if state.charge_cell(sunray).is_some() {
+                    payload.insert("Energy Cell State".into(), "No free cell found".into());
+                } else {
+                    payload.insert("Energy Cell State".into(), "Energy Cell charged".into());
                 }
+
+                Some(PlanetToOrchestrator::SunrayAck {
+                    planet_id: state.id(),
+                })
             }
             OrchestratorToPlanet::InternalStateRequest => {
+                payload.insert("Planet State".into(), format!("{:?}", state.to_dummy()));
+
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id(),
                     planet_state: state.to_dummy(),
                 })
             }
-            _ => None,
+            _ => {
+                // LOG unintended orchestrator message
+                let mut payload_err = Payload::new();
+                payload_err.insert("Message".into(), "Unintended message recieved".into());
+                LogEvent::new(
+                    ActorType::Orchestrator,
+                    0u64,
+                    ActorType::Planet,
+                    state.id().to_string(),
+                    EventType::MessageOrchestratorToPlanet,
+                    Channel::Error,
+                    payload_err,
+                );
+
+                None
+            }
         };
 
-        // Log the response if any
-        if let Some(ref r) = response {
-            let mut p = Payload::new();
-            p.insert("response".into(), planet_to_orchestrator_name(r));
+        // LOG planet response
+        if let Some(ref res) = response {
+            payload.insert("Response".into(), planet_to_orchestrator_name(res));
             LogEvent::new(
                 ActorType::Planet,
                 state.id(),
                 ActorType::Orchestrator,
                 '0',
                 EventType::MessagePlanetToOrchestrator,
-                Channel::Info,
-                p,
+                ACK_MSG_CHNL,
+                payload,
             )
             .emit();
         }
@@ -189,41 +230,53 @@ impl PlanetAI for Orbitron {
         combinator: &Combinator,
         msg: ExplorerToPlanet,
     ) -> Option<PlanetToExplorer> {
-        // Logging incoming explorer message
-        let mut p = Payload::new();
-        p.insert("msg".into(), explorer_to_planet_name(&msg));
+        let explorer_id: u32;
+
+        // LOG incoming explorer message
+        let mut in_payload = Payload::new();
+        in_payload.insert("Message".into(), explorer_to_planet_name(&msg));
         LogEvent::new(
             ActorType::Explorer,
-            1_u32,
+            1_u64, // will be made automatic after the protocol change
             ActorType::Planet,
             state.id().to_string(),
             EventType::MessageExplorerToPlanet,
-            Channel::Info,
-            p,
+            RCV_MSG_CHNL,
+            in_payload,
         )
         .emit();
 
+        // LOG explorer message result
+        let mut payload = Payload::new();
+
         let response = match msg {
-            // This variant is used to ask the Planet for the available BasicResourceTypes
-            ExplorerToPlanet::SupportedResourceRequest { explorer_id: _ } => {
+            ExplorerToPlanet::SupportedResourceRequest { explorer_id: id } => {
+                explorer_id = id;
+                payload.insert(
+                    "Supported Resources".into(),
+                    format!("{:?}", generator.all_available_recipes()),
+                );
+
                 Some(PlanetToExplorer::SupportedResourceResponse {
                     resource_list: generator.all_available_recipes(),
                 })
             }
-            // This variant is used to ask the Planet for the available ComplexResourceTypes
-            ExplorerToPlanet::SupportedCombinationRequest { explorer_id: _ } => {
+            ExplorerToPlanet::SupportedCombinationRequest { explorer_id: id } => {
+                explorer_id = id;
+                payload.insert(
+                    "Supported Combinations".into(),
+                    format!("{:?}", combinator.all_available_recipes()),
+                );
+
                 Some(PlanetToExplorer::SupportedCombinationResponse {
                     combination_list: combinator.all_available_recipes(),
                 })
             }
-            // This variant is used to ask the Planet to generate a BasicResource
             ExplorerToPlanet::GenerateResourceRequest {
-                explorer_id: _,
+                explorer_id: id,
                 resource,
             } => {
-                // First, we need to check whether there is any charged cell (the `full_cell` function does this).
-                // If there is, we then check whether the requested `BasicResourceType` is Hydrogen or Oxygen.
-                // If it is, we generate it; otherwise, the function returns `None`.
+                explorer_id = id;
                 let generated_resource = state.full_cell().and_then(|(cell, _)| match resource {
                     BasicResourceType::Hydrogen => generator
                         .make_hydrogen(cell)
@@ -235,26 +288,31 @@ impl PlanetAI for Orbitron {
                         .map(|oxygen| oxygen.to_basic()),
                     _ => None,
                 });
+                if generated_resource.is_some() {
+                    payload.insert(
+                        "Generated Resource".into(),
+                        format!("{:?}", generated_resource),
+                    );
+                } else {
+                    payload.insert(
+                        "Generated Resource".into(),
+                        "Unsupported Resource Generation Request".into(),
+                    );
+                }
 
                 Some(PlanetToExplorer::GenerateResourceResponse {
                     resource: generated_resource,
                 })
             }
-
-            // This variant is used to ask the Planet to generate a ComplexResource using the ComplexResourceRequest]
             ExplorerToPlanet::CombineResourceRequest {
-                explorer_id: _,
+                explorer_id: id,
                 msg,
             } => {
-                // Same as previous function, we neeed to know if we have any charged cell or not.
+                explorer_id = id;
                 let cell = state.full_cell();
 
                 let ret: Result<ComplexResource, (String, GenericResource, GenericResource)> =
                     match msg {
-                        // Here we match the requested complex resource type.
-                        // Since our planet can only generate water, if the requested complex resource type is Water,
-                        // we check whether there is any charged cell.
-                        // Otherwise, we return an error message.
                         ComplexResourceRequest::Water(resource_1, resource_2) => match cell {
                             Some((cell, _)) => combinator
                                 .make_water(resource_1, resource_2, cell)
@@ -304,36 +362,46 @@ impl PlanetAI for Orbitron {
                             ))
                         }
                     };
+                if ret.is_ok() {
+                    payload.insert("Combined Resource".into(), format!("{:?}", ret));
+                } else {
+                    payload.insert(
+                        "Combined Resource".into(),
+                        format!("Unsupported Resource Combination Request: {:?}", ret),
+                    );
+                }
 
                 Some(PlanetToExplorer::CombineResourceResponse {
                     complex_response: ret,
                 })
             }
-            // this function returns number of cells that are charged.
-            ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _ } => {
+            ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: id } => {
+                explorer_id = id;
                 let mut cnt: u32 = 0;
                 for cell in state.cells_iter() {
                     if cell.is_charged() {
                         cnt += 1;
                     }
                 }
+                payload.insert("Available Energy Cells".into(), format!("{:?}", cnt));
+
                 Some(PlanetToExplorer::AvailableEnergyCellResponse {
                     available_cells: cnt,
                 })
             }
         };
 
-        if let Some(ref r) = response {
-            let mut p = Payload::new();
-            p.insert("response".into(), planet_to_explorer_name(r));
+        // LOG planet response
+        if let Some(ref res) = response {
+            payload.insert("Response".into(), planet_to_explorer_name(res));
             LogEvent::new(
                 ActorType::Planet,
                 state.id(),
                 ActorType::Explorer,
-                '1',
+                explorer_id.to_string(),
                 EventType::MessagePlanetToExplorer,
-                Channel::Info,
-                p,
+                ACK_MSG_CHNL,
+                payload,
             )
             .emit();
         }
@@ -353,39 +421,48 @@ impl PlanetAI for Orbitron {
         _generator: &Generator,
         _combinator: &Combinator,
     ) -> Option<Rocket> {
-        // Log the incoming asteroid event
-        let mut p = Payload::new();
-        p.insert("event".into(), "AsteroidImpact".into());
+        // LOG incoming asteroid
+        let mut payload = Payload::new();
+        payload.insert("Message".into(), "Asteroid".into());
         LogEvent::new(
             ActorType::Orchestrator,
-            0_u32,
+            0_u64,
             ActorType::Planet,
             state.id().to_string(),
-            EventType::InternalPlanetAction,
-            Channel::Warning,
-            p,
+            EventType::MessageOrchestratorToPlanet,
+            RCV_MSG_CHNL,
+            payload,
         )
         .emit();
 
-        let _ = state.build_rocket(0);
+        // LOG asteroid response
+        let mut payload = Payload::new();
+
+        let has_rocket = state.has_rocket();
+        if has_rocket {
+            payload.insert("Result".into(), "Rocket was Ready".into());
+        } else {
+            payload.insert("Result".into(), "Rocket was Built".into());
+            let _ = state.build_rocket(0);
+        }
         let rocket = state.take_rocket();
 
-        let mut p = Payload::new();
         if rocket.is_some() {
-            p.insert("result".into(), "RocketBuilt".into());
+            payload.insert("Result".into(), "Rocket is Available".into());
         } else {
-            p.insert("result".into(), "RocketFailed".into());
+            payload.insert("Result".into(), "No Rocket Available".into());
         }
         LogEvent::new(
             ActorType::Planet,
             state.id(),
             ActorType::Orchestrator,
             '0',
-            EventType::InternalPlanetAction,
-            Channel::Warning,
-            p,
+            EventType::MessagePlanetToOrchestrator,
+            ACK_MSG_CHNL,
+            payload,
         )
         .emit();
+
         rocket
     }
 
@@ -396,16 +473,16 @@ impl PlanetAI for Orbitron {
     fn start(&mut self, state: &PlanetState) {
         self.is_stopped = false;
 
-        let mut p = Payload::new();
-        p.insert("event".into(), "StartPlanetAI".into());
+        let mut payload = Payload::new();
+        payload.insert("Message".into(), "Started Planet Orbitron".into());
         LogEvent::new(
             ActorType::Orchestrator,
-            0_u32,
+            0_u64,
             ActorType::Planet,
             state.id().to_string(),
-            EventType::InternalPlanetAction,
-            Channel::Info,
-            p,
+            EventType::MessageOrchestratorToPlanet,
+            RCV_MSG_CHNL,
+            payload,
         )
         .emit();
     }
@@ -417,16 +494,16 @@ impl PlanetAI for Orbitron {
     fn stop(&mut self, state: &PlanetState) {
         self.is_stopped = true;
 
-        let mut p = Payload::new();
-        p.insert("event".into(), "StopPlanetAI".into());
+        let mut payload = Payload::new();
+        payload.insert("Message".into(), "Stoped Planet Orbitron".into());
         LogEvent::new(
             ActorType::Orchestrator,
-            0_u32,
+            0_u64,
             ActorType::Planet,
             state.id().to_string(),
-            EventType::InternalPlanetAction,
-            Channel::Info,
-            p,
+            EventType::MessageOrchestratorToPlanet,
+            RCV_MSG_CHNL,
+            payload,
         )
         .emit();
     }

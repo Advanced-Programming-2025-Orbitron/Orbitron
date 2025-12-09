@@ -11,7 +11,7 @@
 //! The resulting configuration is passed to [`Planet::new`], which returns a
 //! fully-initialized [`Planet`] instance or reports configuration errors.
 #![allow(rustdoc::private_intra_doc_links)]
-use common_game::components::planet::{Planet, PlanetState, PlanetType};
+use common_game::components::planet::{Planet, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::*;
 use common_game::protocols::messages::*;
@@ -63,14 +63,15 @@ pub fn create_planet(
 
     // log planet creation
     let mut payload = Payload::new();
-    payload.insert("planet_id".into(), planet_id.to_string());
-    payload.insert("planet_type".into(), format!("{planet_type:?}"));
+    payload.insert("gen_rules".into(), "Hydrogen, Oxygen".into());
+    payload.insert("comb_rules".into(), "Water".into());
+    payload.insert("Message".into(), "New planet orbitron created".into());
     LogEvent::new(
-        ActorType::User,
-        2_u32,
+        ActorType::Orchestrator,
+        0_u64,
         ActorType::Planet,
         planet_id.to_string(),
-        EventType::InternalPlanetAction,
+        EventType::MessageOrchestratorToPlanet,
         Channel::Info,
         payload,
     )
@@ -83,8 +84,9 @@ pub fn create_planet(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common_game::components::planet::PlanetState;
     use common_game::components::resource::{Combinator, Generator};
-    use crossbeam_channel::bounded;
+    use crossbeam_channel::unbounded;
 
     // Helper function to create test channels
     fn setup_test_channels() -> (
@@ -95,9 +97,9 @@ mod tests {
         Receiver<PlanetToOrchestrator>,
         Sender<ExplorerToPlanet>,
     ) {
-        let (tx_orch_to_planet, rx_orch_to_planet) = bounded::<OrchestratorToPlanet>(100);
-        let (tx_planet_to_orch, rx_planet_to_orch) = bounded::<PlanetToOrchestrator>(100);
-        let (tx_expl_to_planet, rx_expl_to_planet) = bounded::<ExplorerToPlanet>(100);
+        let (tx_orch_to_planet, rx_orch_to_planet) = unbounded::<OrchestratorToPlanet>();
+        let (tx_planet_to_orch, rx_planet_to_orch) = unbounded::<PlanetToOrchestrator>();
+        let (tx_expl_to_planet, rx_expl_to_planet) = unbounded::<ExplorerToPlanet>();
 
         (
             rx_orch_to_planet,

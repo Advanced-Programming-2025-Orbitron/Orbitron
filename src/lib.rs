@@ -110,13 +110,6 @@ mod tests {
             tx_expl_to_planet,
         )
     }
-    fn planet_create() -> Planet {
-        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
-        let planet_id = 42;
-        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
-        planet
-    }
-
     // UNIT tests for creating planet
     #[test]
     fn test_create_planet_returns_valid_planet() {
@@ -187,34 +180,21 @@ mod tests {
             _ => None,
         }
     }
+    fn planet_create() -> Planet {
+        let (rx_orch, tx_orch, rx_expl, _, _, _) = setup_test_channels();
+        let planet_id = 42;
+        let planet = create_planet(rx_orch, tx_orch, rx_expl, planet_id);
+        planet
+    }
     #[test]
     fn test_supported_resource_request() {
         let planet = planet_create();
-        let state = planet.state();
-        let generator = planet.generator();
-        let combinator = planet.combinator();
         let msg = ExplorerToPlanet::SupportedResourceRequest { explorer_id: 1 };
-        let response = handle_explorer_msg(state, generator, combinator, msg);
+        let response =
+            handle_explorer_msg(planet.state(), planet.generator(), planet.combinator(), msg);
         match response {
             Some(PlanetToExplorer::SupportedResourceResponse { resource_list }) => {
-                assert_eq!(resource_list, generator.all_available_recipes());
-            }
-            _ => panic!("Unexpected response"),
-        }
-        let msg = ExplorerToPlanet::SupportedCombinationRequest { explorer_id: 2 };
-        let response = handle_explorer_msg(state, generator, combinator, msg);
-        match response {
-            Some(PlanetToExplorer::SupportedCombinationResponse { combination_list }) => {
-                assert_eq!(combination_list, combinator.all_available_recipes());
-            }
-            _ => panic!("Unexpected response"),
-        }
-        let cnt = state.cells_iter().filter(|cell| cell.is_charged()).count() as u32;
-        let msg = ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: 3 };
-        let response = handle_explorer_msg(state, generator, combinator, msg);
-        match response {
-            Some(PlanetToExplorer::AvailableEnergyCellResponse { available_cells: c }) => {
-                assert_eq!(cnt, c);
+                assert_eq!(resource_list, planet.generator().all_available_recipes());
             }
             _ => panic!("Unexpected response"),
         }
@@ -222,14 +202,15 @@ mod tests {
     #[test]
     fn test_supported_combination_request() {
         let planet = planet_create();
-        let state = planet.state();
-        let generator = planet.generator();
-        let combinator = planet.combinator();
         let msg = ExplorerToPlanet::SupportedCombinationRequest { explorer_id: 2 };
-        let response = handle_explorer_msg(state, generator, combinator, msg);
+        let response =
+            handle_explorer_msg(planet.state(), planet.generator(), planet.combinator(), msg);
         match response {
             Some(PlanetToExplorer::SupportedCombinationResponse { combination_list }) => {
-                assert_eq!(combination_list, combinator.all_available_recipes());
+                assert_eq!(
+                    combination_list,
+                    planet.combinator().all_available_recipes()
+                );
             }
             _ => panic!("Unexpected response"),
         }
@@ -237,12 +218,14 @@ mod tests {
     #[test]
     fn test_available_energy_cell_request() {
         let planet = planet_create();
-        let state = planet.state();
-        let generator = planet.generator();
-        let combinator = planet.combinator();
-        let cnt = state.cells_iter().filter(|cell| cell.is_charged()).count() as u32;
+        let cnt = planet
+            .state()
+            .cells_iter()
+            .filter(|cell| cell.is_charged())
+            .count() as u32;
         let msg = ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: 3 };
-        let response = handle_explorer_msg(state, generator, combinator, msg);
+        let response =
+            handle_explorer_msg(planet.state(), planet.generator(), planet.combinator(), msg);
         match response {
             Some(PlanetToExplorer::AvailableEnergyCellResponse { available_cells: c }) => {
                 assert_eq!(cnt, c);

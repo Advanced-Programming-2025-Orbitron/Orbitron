@@ -1,8 +1,8 @@
 [package]
 name = "orbitron"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-common-game = { git = "ssh://git@github.com/unitn-ap-2025/common.git" }
+common-game = "2.0.0"
 crossbeam-channel = "0.5.15"

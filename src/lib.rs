@@ -14,11 +14,15 @@
 use common_game::components::planet::{Planet, PlanetType};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::*;
-use common_game::protocols::messages::*;
+use common_game::protocols::orchestrator_planet::*;
+use common_game::protocols::planet_explorer::*;
+use common_game::utils::ID;
 use crossbeam_channel::{Receiver, Sender};
 
 mod ai;
 use ai::orbitron::Orbitron;
+
+const ORCHESTRATOR_ID: ID = 0;
 
 /// Creates and initializes an Orbitron planet.
 ///
@@ -40,7 +44,7 @@ pub fn create_planet(
     from_orchestrator: Receiver<OrchestratorToPlanet>,
     to_orchestrator: Sender<PlanetToOrchestrator>,
     from_explorer: Receiver<ExplorerToPlanet>,
-    planet_id: u32,
+    planet_id: ID,
 ) -> Planet {
     let planet_type = PlanetType::B;
     // Basic resources this planet can generate on its own.
@@ -48,7 +52,7 @@ pub fn create_planet(
     // Complex resources that can be formed from combinations.
     let comb_rules = vec![ComplexResourceType::Water];
     // AI logic controlling the planet's behavior.
-    let ai: Box<Orbitron> = Box::new(Orbitron::new());
+    let ai: Box<Orbitron> = Box::new(Orbitron::new(planet_id));
 
     let planet = Planet::new(
         planet_id,
@@ -67,10 +71,8 @@ pub fn create_planet(
     payload.insert("comb_rules".into(), "Water".into());
     payload.insert("Message".into(), "New planet orbitron created".into());
     LogEvent::new(
-        ActorType::Orchestrator,
-        0_u64,
-        ActorType::Planet,
-        planet_id.to_string(),
+        Some(Participant::new(ActorType::Orchestrator, ORCHESTRATOR_ID)),
+        Some(Participant::new(ActorType::Planet, planet_id)),
         EventType::MessageOrchestratorToPlanet,
         Channel::Info,
         payload,

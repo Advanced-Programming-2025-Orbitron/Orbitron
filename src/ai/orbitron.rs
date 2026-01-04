@@ -29,35 +29,23 @@
 //! - Lifecycle control  
 //!   Handles `StartPlanetAI` and `StopPlanetAI` messages, enabling
 //!   or disabling the decision-making logic.
-use common_game::components::planet::{PlanetAI, PlanetState};
+use common_game::components::planet::{DummyPlanetState, PlanetAI, PlanetState};
 use common_game::components::resource::{
     BasicResourceType, Combinator, ComplexResource, ComplexResourceRequest, Generator,
     GenericResource,
 };
 use common_game::components::rocket::Rocket;
+use common_game::components::sunray::Sunray;
 use common_game::logging::*;
-use common_game::protocols::messages::*;
+use common_game::protocols::planet_explorer::*;
+use common_game::utils::ID;
 
 /// Set channels for incoming/outgoing messages
 const RCV_MSG_CHNL: Channel = Channel::Debug;
 const ACK_MSG_CHNL: Channel = Channel::Debug;
 
-/// Helper functions to convert messages and responses into string names
-fn orchestrator_to_planet_name(msg: &OrchestratorToPlanet) -> String {
-    match msg {
-        OrchestratorToPlanet::Sunray(_) => "Sunray".into(),
-        OrchestratorToPlanet::InternalStateRequest => "Internal State Request".into(),
-        _ => "Unexpected Message".into(),
-    }
-}
-/// Helper functions to convert messages and responses into string names
-fn planet_to_orchestrator_name(msg: &PlanetToOrchestrator) -> String {
-    match msg {
-        PlanetToOrchestrator::SunrayAck { .. } => "Sunray Ack".into(),
-        PlanetToOrchestrator::InternalStateResponse { .. } => "Internal State Response".into(),
-        _ => "Unexpected Message".into(),
-    }
-}
+const ORCHESTRATOR_ID: ID = 0;
+
 /// Helper functions to convert messages and responses into string names
 fn explorer_to_planet_name(msg: &ExplorerToPlanet) -> String {
     match msg {
@@ -101,15 +89,12 @@ pub struct Orbitron {
 /// By default, the AI starts in the stopped state and will only
 /// begin processing once explicitly started.
 impl Orbitron {
-    pub fn new() -> Self {
+    pub fn new(id: ID) -> Self {
         // LOG internal ai creation
         let mut payload = Payload::new();
         payload.insert("Message".into(), "New AI orbitron created".into());
-        LogEvent::new(
-            ActorType::Planet,
-            0u64,
-            ActorType::Planet,
-            '0',
+        LogEvent::self_directed(
+            Participant::new(ActorType::Planet, id),
             EventType::InternalPlanetAction,
             Channel::Info,
             payload,
@@ -121,96 +106,61 @@ impl Orbitron {
 }
 
 impl PlanetAI for Orbitron {
-    /// Handler for **all** messages received by an orchestrator (receiving
-    /// end of the [OrchestratorToPlanet] channel).
-    ///
-    /// [OrchestratorToPlanet::Sunray]-This variant is used to handle Sunray msg
+    /// This function is used to handle Sunray msg
     /// # Returns
     /// SunrayAck indicates Sunray is not consumed due to full energy cells
     /// None indicates energy cell received Sunray
-    ///
-    /// [OrchestratorToPlanet::InternalStateRequest]-This variant is used to handle InternalStateRequest msg
-    /// # Returns
-    /// Planet id and planet state
-    fn handle_orchestrator_msg(
+    fn handle_sunray(
         &mut self,
         state: &mut PlanetState,
         _generator: &Generator,
         _combinator: &Combinator,
-        msg: OrchestratorToPlanet,
-    ) -> Option<PlanetToOrchestrator> {
-        // LOG incoming orchestrator message
+        sunray: Sunray,
+    ) {
         let mut payload = Payload::new();
-        payload.insert("Message".into(), orchestrator_to_planet_name(&msg));
-        LogEvent::new(
-            ActorType::Orchestrator,
-            0_u64,
-            ActorType::Planet,
-            state.id().to_string(),
-            EventType::MessageOrchestratorToPlanet,
+
+        if state.charge_cell(sunray).is_some() {
+            payload.insert("Energy Cell State".into(), "Energy Cell full".into());
+        } else {
+            payload.insert("Energy Cell State".into(), "Energy Cell charged".into());
+        }
+
+        // LOG incoming sunray handle
+        LogEvent::broadcast(
+            Participant::new(ActorType::Planet, state.id()),
+            EventType::InternalPlanetAction,
             RCV_MSG_CHNL,
             payload,
         )
         .emit();
+    }
 
-        // LOG orchestrator message result
+    /// This function is used to handle InternalStateRequest msg
+    /// # Returns
+    /// DummyPlanetState
+    fn handle_internal_state_req(
+        &mut self,
+        state: &mut PlanetState,
+        _generator: &Generator,
+        _combinator: &Combinator,
+    ) -> DummyPlanetState {
         let mut payload = Payload::new();
 
-        let response = match msg {
-            OrchestratorToPlanet::Sunray(sunray) => {
-                if state.charge_cell(sunray).is_some() {
-                    payload.insert("Energy Cell State".into(), "No free cell found".into());
-                } else {
-                    payload.insert("Energy Cell State".into(), "Energy Cell charged".into());
-                }
+        payload.insert("Planet State".into(), format!("{:?}", state.to_dummy()));
 
-                Some(PlanetToOrchestrator::SunrayAck {
-                    planet_id: state.id(),
-                })
-            }
-            OrchestratorToPlanet::InternalStateRequest => {
-                payload.insert("Planet State".into(), format!("{:?}", state.to_dummy()));
+        // LOG internal state response
+        LogEvent::new(
+            Some(Participant::new(ActorType::Planet, state.id())),
+            Some(Participant::new(ActorType::Orchestrator, ORCHESTRATOR_ID)),
+            EventType::MessagePlanetToOrchestrator,
+            ACK_MSG_CHNL,
+            payload,
+        )
+        .emit();
 
-                Some(PlanetToOrchestrator::InternalStateResponse {
-                    planet_id: state.id(),
-                    planet_state: state.to_dummy(),
-                })
-            }
-            _ => {
-                // LOG unintended orchestrator message
-                let mut payload_err = Payload::new();
-                payload_err.insert("Message".into(), "Unintended message recieved".into());
-                LogEvent::new(
-                    ActorType::Orchestrator,
-                    0u64,
-                    ActorType::Planet,
-                    state.id().to_string(),
-                    EventType::MessageOrchestratorToPlanet,
-                    Channel::Error,
-                    payload_err,
-                );
-
-                None
-            }
-        };
-
-        // LOG planet response
-        if let Some(ref res) = response {
-            payload.insert("Response".into(), planet_to_orchestrator_name(res));
-            LogEvent::new(
-                ActorType::Planet,
-                state.id(),
-                ActorType::Orchestrator,
-                '0',
-                EventType::MessagePlanetToOrchestrator,
-                ACK_MSG_CHNL,
-                payload,
-            )
-            .emit();
-        }
-
-        response
+        state.to_dummy()
     }
+
     /// Handles messages from explorers.
     ///
     /// - Provides supported basic and complex resource types
@@ -230,21 +180,11 @@ impl PlanetAI for Orbitron {
         combinator: &Combinator,
         msg: ExplorerToPlanet,
     ) -> Option<PlanetToExplorer> {
-        let explorer_id: u32;
+        let explorer_id: ID;
 
         // LOG incoming explorer message
         let mut in_payload = Payload::new();
         in_payload.insert("Message".into(), explorer_to_planet_name(&msg));
-        LogEvent::new(
-            ActorType::Explorer,
-            1_u64, // will be made automatic after the protocol change
-            ActorType::Planet,
-            state.id().to_string(),
-            EventType::MessageExplorerToPlanet,
-            RCV_MSG_CHNL,
-            in_payload,
-        )
-        .emit();
 
         // LOG explorer message result
         let mut payload = Payload::new();
@@ -391,14 +331,22 @@ impl PlanetAI for Orbitron {
             }
         };
 
+        // LOG explorer message acknowledgement
+        LogEvent::new(
+            Some(Participant::new(ActorType::Orchestrator, explorer_id)),
+            Some(Participant::new(ActorType::Planet, state.id())),
+            EventType::MessageExplorerToPlanet,
+            RCV_MSG_CHNL,
+            in_payload,
+        )
+        .emit();
+
         // LOG planet response
         if let Some(ref res) = response {
             payload.insert("Response".into(), planet_to_explorer_name(res));
             LogEvent::new(
-                ActorType::Planet,
-                state.id(),
-                ActorType::Explorer,
-                explorer_id.to_string(),
+                Some(Participant::new(ActorType::Planet, state.id())),
+                Some(Participant::new(ActorType::Orchestrator, explorer_id)),
                 EventType::MessagePlanetToExplorer,
                 ACK_MSG_CHNL,
                 payload,
@@ -425,10 +373,8 @@ impl PlanetAI for Orbitron {
         let mut payload = Payload::new();
         payload.insert("Message".into(), "Asteroid".into());
         LogEvent::new(
-            ActorType::Orchestrator,
-            0_u64,
-            ActorType::Planet,
-            state.id().to_string(),
+            Some(Participant::new(ActorType::Orchestrator, ORCHESTRATOR_ID)),
+            Some(Participant::new(ActorType::Planet, state.id())),
             EventType::MessageOrchestratorToPlanet,
             RCV_MSG_CHNL,
             payload,
@@ -453,10 +399,8 @@ impl PlanetAI for Orbitron {
             payload.insert("Result".into(), "No Rocket Available".into());
         }
         LogEvent::new(
-            ActorType::Planet,
-            state.id(),
-            ActorType::Orchestrator,
-            '0',
+            Some(Participant::new(ActorType::Planet, state.id())),
+            Some(Participant::new(ActorType::Orchestrator, ORCHESTRATOR_ID)),
             EventType::MessagePlanetToOrchestrator,
             ACK_MSG_CHNL,
             payload,
@@ -466,20 +410,37 @@ impl PlanetAI for Orbitron {
         rocket
     }
 
+    fn on_explorer_arrival(
+        &mut self,
+        _state: &mut PlanetState,
+        _generator: &Generator,
+        _combinator: &Combinator,
+        _explorer_id: ID,
+    ) {
+    }
+
+    fn on_explorer_departure(
+        &mut self,
+        _state: &mut PlanetState,
+        _generator: &Generator,
+        _combinator: &Combinator,
+        _explorer_id: ID,
+    ) {
+    }
+
     /// This method will be invoked when a [OrchestratorToPlanet::StartPlanetAI]
     /// is received, but only if the planet is currently in a stopped state.
     ///
     /// Start messages received when planet is already running are ignored.
-    fn start(&mut self, state: &PlanetState) {
+    fn on_start(&mut self, state: &PlanetState, _generator: &Generator, _combinator: &Combinator) {
         self.is_stopped = false;
 
         let mut payload = Payload::new();
         payload.insert("Message".into(), "Started Planet Orbitron".into());
+
         LogEvent::new(
-            ActorType::Orchestrator,
-            0_u64,
-            ActorType::Planet,
-            state.id().to_string(),
+            Some(Participant::new(ActorType::Orchestrator, ORCHESTRATOR_ID)),
+            Some(Participant::new(ActorType::Planet, state.id())),
             EventType::MessageOrchestratorToPlanet,
             RCV_MSG_CHNL,
             payload,
@@ -491,16 +452,14 @@ impl PlanetAI for Orbitron {
     /// is received, but only if the planet is currently in a running state.
     ///
     /// Stop messages received when planet is already stopped are ignored.
-    fn stop(&mut self, state: &PlanetState) {
+    fn on_stop(&mut self, state: &PlanetState, _generator: &Generator, _combinator: &Combinator) {
         self.is_stopped = true;
 
         let mut payload = Payload::new();
         payload.insert("Message".into(), "Stoped Planet Orbitron".into());
         LogEvent::new(
-            ActorType::Orchestrator,
-            0_u64,
-            ActorType::Planet,
-            state.id().to_string(),
+            Some(Participant::new(ActorType::Orchestrator, ORCHESTRATOR_ID)),
+            Some(Participant::new(ActorType::Planet, state.id())),
             EventType::MessageOrchestratorToPlanet,
             RCV_MSG_CHNL,
             payload,

@@ -180,18 +180,27 @@ impl PlanetAI for Orbitron {
         combinator: &Combinator,
         msg: ExplorerToPlanet,
     ) -> Option<PlanetToExplorer> {
-        let explorer_id: ID;
+        let explorer_id: ID = msg.explorer_id();
 
         // LOG incoming explorer message
         let mut in_payload = Payload::new();
         in_payload.insert("Message".into(), explorer_to_planet_name(&msg));
 
+        LogEvent::new(
+            Some(Participant::new(ActorType::Orchestrator, explorer_id)),
+            Some(Participant::new(ActorType::Planet, state.id())),
+            EventType::MessageExplorerToPlanet,
+            RCV_MSG_CHNL,
+            in_payload,
+        )
+        .emit();
+
+
         // LOG explorer message result
         let mut payload = Payload::new();
 
         let response = match msg {
-            ExplorerToPlanet::SupportedResourceRequest { explorer_id: id } => {
-                explorer_id = id;
+            ExplorerToPlanet::SupportedResourceRequest { explorer_id: _id } => {
                 payload.insert(
                     "Supported Resources".into(),
                     format!("{:?}", generator.all_available_recipes()),
@@ -201,8 +210,7 @@ impl PlanetAI for Orbitron {
                     resource_list: generator.all_available_recipes(),
                 })
             }
-            ExplorerToPlanet::SupportedCombinationRequest { explorer_id: id } => {
-                explorer_id = id;
+            ExplorerToPlanet::SupportedCombinationRequest { explorer_id: _id } => {
                 payload.insert(
                     "Supported Combinations".into(),
                     format!("{:?}", combinator.all_available_recipes()),
@@ -213,10 +221,9 @@ impl PlanetAI for Orbitron {
                 })
             }
             ExplorerToPlanet::GenerateResourceRequest {
-                explorer_id: id,
+                explorer_id: _id,
                 resource,
             } => {
-                explorer_id = id;
                 let generated_resource = state.full_cell().and_then(|(cell, _)| match resource {
                     BasicResourceType::Hydrogen => generator
                         .make_hydrogen(cell)
@@ -245,10 +252,9 @@ impl PlanetAI for Orbitron {
                 })
             }
             ExplorerToPlanet::CombineResourceRequest {
-                explorer_id: id,
+                explorer_id: _id,
                 msg,
             } => {
-                explorer_id = id;
                 let cell = state.full_cell();
 
                 let ret: Result<ComplexResource, (String, GenericResource, GenericResource)> =
@@ -315,8 +321,7 @@ impl PlanetAI for Orbitron {
                     complex_response: ret,
                 })
             }
-            ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: id } => {
-                explorer_id = id;
+            ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: _id } => {
                 let mut cnt: u32 = 0;
                 for cell in state.cells_iter() {
                     if cell.is_charged() {
@@ -330,16 +335,6 @@ impl PlanetAI for Orbitron {
                 })
             }
         };
-
-        // LOG explorer message acknowledgement
-        LogEvent::new(
-            Some(Participant::new(ActorType::Orchestrator, explorer_id)),
-            Some(Participant::new(ActorType::Planet, state.id())),
-            EventType::MessageExplorerToPlanet,
-            RCV_MSG_CHNL,
-            in_payload,
-        )
-        .emit();
 
         // LOG planet response
         if let Some(ref res) = response {

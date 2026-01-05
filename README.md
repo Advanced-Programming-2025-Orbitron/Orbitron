@@ -44,6 +44,5 @@ The `OrbitronAI` struct implements the core decision-making logic for our planet
 The implementation follows a clean separation of concerns:
 - `lib.rs`: Creates the planet
 - `ai/orbitron.rs`: Core AI logic (implement here!)
-To be written!
 
 ** Please explore  🌌**

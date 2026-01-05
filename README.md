@@ -2,18 +2,21 @@
 
 > *A sophisticated planet implementation*
 
-## 🚀 Overview
+## ⚙️ Telegram customer support group
 
-Orbitron is our custom implementation of the `PlanetAI` trait, designed to intelligently manage a Type B planet. This planet operates as an autonomous agent, coordinating with explorers and orchestrators to optimize resource generation, combination, and rocket deployment.
+[Group](https://t.me/+NICrE94eKuY0MTk9)
 
 ## 🏗️ Architecture
 
-<details>
 <summary>Planet Configuration</summary>
 
 Our planet is configured with the following capabilities:
 
 **Type:** `PlanetType::B`
+
+**Energy Cell Count:** `1`
+
+**Rocket:** `no rocket`
 
 **Resource Generation:**
 - 🔵 Hydrogen
@@ -22,16 +25,6 @@ Our planet is configured with the following capabilities:
 **Resource Combination:**
 - 💧 Water (H₂O)
 
-</details>
-
-<details>
-<summary> To be written! </summary>
-
-
-#### To do 
-
-</details>
-
 ## 🧠 OrbitronAI Implementation
 
 <details>
@@ -39,13 +32,12 @@ Our planet is configured with the following capabilities:
 
 The `OrbitronAI` struct implements the core decision-making logic for our planet. Located in `ai/orbitron.rs`, it processes incoming messages and makes strategic decisions about:
 
-- **Resource Generation**: When and which basic resources to produce
-- **Resource Combination**: Creating complex resources from basic ones
-- **Rocket Management**: Launching rockets with optimal resource payloads
+- **Resource Generation**: Everything needed for your explorer to make water
+- **Resource Combination**: Making as much water as time allows
 - **Explorer Interaction**: Responding to explorer requests and coordinating transfers
+- **Astroid Interaction**: Die ૮(˶ㅠ︿ㅠ)ა
 
 </details>
-
 
 ## 📝 Development Notes
 
